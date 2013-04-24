@@ -433,11 +433,8 @@ SchedulerSP Central::scheduler()
 
 bool Central::schedule(unsigned timeout_, Scheduler::Queue::job_type job_)
 {
-	Lock g(g_big);
-	if (NULL == s_scheduler.get())
-		return true;
-
-	return s_scheduler->push(timeout_, job_);
+	SchedulerSP x = scheduler();
+	return NULL == x.get() || x->push(timeout_, job_);
 }
 
 namespace Sink
