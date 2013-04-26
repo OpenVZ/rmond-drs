@@ -97,6 +97,10 @@ typename Unit<T>::row_type Unit<T>::row() const
 template<class T>
 typename Unit<T>::row_type Unit<T>::inserted() const
 {
+	cell_type* c = cell();
+	if (NULL == c || c->colnum != schema_type::ROW_STATUS)
+		return row_type();
+
 	row_type r = row();
 	if (NULL == r.get())
 		return row_type();
