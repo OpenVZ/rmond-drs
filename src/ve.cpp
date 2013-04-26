@@ -190,8 +190,39 @@ struct Provenance: Value::Storage
 
 	void refresh(PRL_HANDLE h_);
 private:
+	static FILE* shaman(PRL_HANDLE h_, tupleSP_type ve_);
+
 	tupleWP_type m_data;
 };
+
+FILE* Provenance::shaman(PRL_HANDLE h_, tupleSP_type ve_)
+{
+	PRL_VM_TYPE t = PVT_VM;
+	PRL_RESULT e = PrlVmCfg_GetVmType(h_, &t);
+	if (PRL_FAILED(e))
+		return NULL;
+
+	std::string x;
+	switch (t)
+	{
+	case PVT_VM:
+		x.append("shaman get-last-node vm-").append(ve_->get<NAME>());
+		break;
+	case PVT_CT:
+		x.append("shaman get-last-node ct-").append(ve_->get<VEID>());
+		break;
+	default:
+		snmp_log(LOG_ERR, LOG_PREFIX"unsupported ve type %d\n", t);
+		return NULL;
+	}
+	FILE* output = popen(x.c_str(), "r");
+	if (NULL == output)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"cannot start command line %s\n",
+			x.c_str());
+	}
+	return output;
+}
 
 void Provenance::refresh(PRL_HANDLE h_)
 {
@@ -199,41 +230,31 @@ void Provenance::refresh(PRL_HANDLE h_)
 	if (NULL == y.get())
 		return;
 
-	std::ostringstream o;
-	y->put<PROVENANCE>(std::string("ololo!"));
-	PRL_VM_TYPE t = PVT_VM;
-	PRL_RESULT e = PrlVmCfg_GetVmType(h_, &t);
-	if (PRL_FAILED(e))
-		return;
-	switch (t)
-	{
-	case PVT_VM:
-		o << "shaman bla-bla-bla vm-" << y->get<NAME>();
-		break;
-	case PVT_CT:
-		o << "shaman bla-bla-bla ct-" << y->get<VEID>();
-		break;
-	default:
-		snmp_log(LOG_ERR, LOG_PREFIX"unsupported ve type %d\n", t);
-		return;
-	}
-	FILE* p = popen(o.str().c_str(), "r");
+	y->put<PERFECT_NODE>(std::string(""));
+	FILE* p = shaman(h_, y);
 	if (NULL == p)
 		return;
 
-	for (o.str(""); !feof(p) && o.tellp() < 1024; )
+	std::ostringstream e;
+	static const char MARK[] = "Resource last node ID :";
+	while (!feof(p) && e.tellp() < 1024)
 	{
 		char b[128] = {};
-		if (NULL != fgets(b, sizeof(b), p))
-			o << b;
+		if (NULL == fgets(b, sizeof(b), p))
+			continue;
+		e << b;
+		if (boost::starts_with(b, MARK))
+		{
+			std::string n = &b[sizeof(MARK) - 1];
+			boost::trim(n);
+			y->put<PERFECT_NODE>(n);
+		}
 	}
 	int s = pclose(p);
-	if (0 == s)
-		y->put<PROVENANCE>(o.str());
-	else
+	if (0 != s)
 	{
 		snmp_log(LOG_ERR, LOG_PREFIX"schaman status %d(%d):\n%s\n",
-				WEXITSTATUS(s), s, o.str().c_str());
+				WEXITSTATUS(s), s, e.str().c_str());
 	}
 }
 
