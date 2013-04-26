@@ -9,6 +9,7 @@ namespace Rmond
 
 struct Sdk
 {
+	static std::string getIssuerId(PRL_HANDLE event_);
 	static std::string getString(const boost::function2<PRL_RESULT, PRL_STR, PRL_UINT32*>& sdk_);
 	static PRL_HANDLE getAsyncResult(PRL_HANDLE job_);
 };

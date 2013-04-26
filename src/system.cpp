@@ -1,4 +1,5 @@
 #include "system.h"
+#include <boost/bind.hpp>
 
 namespace Rmond
 {
@@ -42,6 +43,11 @@ PRL_HANDLE Sdk::getAsyncResult(PRL_HANDLE job_)
 	}
 	PrlHandle_Free(job_);
 	return output;
+}
+
+std::string Sdk::getIssuerId(PRL_HANDLE event_)
+{
+	return getString(boost::bind(&PrlEvent_GetIssuerId, event_, _1, _2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
