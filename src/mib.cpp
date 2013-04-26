@@ -53,8 +53,6 @@ private:
 
 	Server(const Host::space_type& host_, const VE::space_type& ves_);
 
-	VE::UnitSP take(const std::string& id_);
-	static std::string getIssuerId(PRL_HANDLE event_);
 	static PRL_RESULT PRL_CALL handle(PRL_HANDLE , PRL_VOID_PTR );
 	
 	PRL_HANDLE m_psdk;
@@ -232,30 +230,27 @@ void Server::detach(PRL_HANDLE )
 	Handler::Link(shared_from_this()).reschedule();
 }
 
-VE::UnitSP Server::take(const std::string& id_)
-{
-	veMap_type::iterator p = m_ves.second.find(id_);
-	if (m_ves.second.end() != p)
-		return p->second;
-
-	if (NULL == m_host.second.get())
-		return VE::UnitSP();
-
-	VE::UnitSP output = m_host.second->find(id_, m_ves.first);
-	if (NULL != output.get())
-	{
-		m_ves.second[id_] = output;
-		m_host.second->ves(m_ves.second.size());
-	}
-	return output;
-}
-
 void Server::pull(PRL_HANDLE event_)
 {
+	SchedulerSP s = Central::scheduler();
 	Lock g(g_big);
-	VE::UnitSP u = take(getIssuerId(event_));
-	if (NULL != u.get())
-		u->pullState();
+	std::string d = Sdk::getIssuerId(event_);
+	veMap_type::iterator p = m_ves.second.find(d);
+	if (m_ves.second.end() != p)
+		return p->second->pullState();
+
+	if (NULL == m_host.second.get())
+		return;
+
+	VE::UnitSP u = m_host.second->find(d, m_ves.first);
+	if (NULL == u.get())
+		return;
+
+	u->pullState();
+	m_ves.second[d] = u;
+	m_host.second->ves(m_ves.second.size());
+	if (NULL != s.get())
+		s->push(Handler::Snatch(u, g_big));
 }
 
 void Server::performance(PRL_HANDLE event_)
@@ -286,8 +281,8 @@ void Server::performance(PRL_HANDLE event_)
 	}
 	case PIE_VIRTUAL_MACHINE:
 	{
-		VE::UnitSP u = take(getIssuerId(event_));
-		if (NULL == u.get())
+		veMap_type::iterator v = m_ves.second.find(Sdk::getIssuerId(event_));
+		if (m_ves.second.end() == v)
 			return;
 		while(n-- > 0)
 		{
@@ -295,7 +290,7 @@ void Server::performance(PRL_HANDLE event_)
 			r = PrlEvent_GetParam(event_, n, &p);
 			if (PRL_FAILED(r))
 				continue;
-			u->refresh(p);
+			v->second->refresh(p);
 			PrlHandle_Free(p);
 		}
 	}
@@ -307,7 +302,7 @@ void Server::performance(PRL_HANDLE event_)
 void Server::erase(PRL_HANDLE event_)
 {
 	Lock g(g_big);
-	m_ves.second.erase(getIssuerId(event_));
+	m_ves.second.erase(Sdk::getIssuerId(event_));
 	m_host.second->ves(m_ves.second.size());
 }
 
@@ -327,11 +322,6 @@ void Server::snapshot(const Value::Metrix_type& metrix_, boost::ptr_list<Value::
 		if (NULL != u)
 			dst_.push_back(u);
 	}
-}
-
-std::string Server::getIssuerId(PRL_HANDLE event_)
-{
-	return Sdk::getString(boost::bind(&PrlEvent_GetIssuerId, event_, _1, _2));
 }
 
 PRL_RESULT PRL_CALL Server::handle(PRL_HANDLE event_, PRL_VOID_PTR user_)
