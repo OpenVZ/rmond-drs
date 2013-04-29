@@ -207,13 +207,11 @@ void License::refresh(PRL_HANDLE h_)
 		if (NULL == s)
 			continue;
 		s[0] = 0;
-		std::string n = b;
-		boost::trim(n);
-		if (0 == n.compare("ct_total"))
+		if (boost::ends_with(b, "ct_total"))
 			v = parse(&s[1]);
-		else if (0 == n.compare("nr_vms"))
+		else if (boost::ends_with(b, "nr_vms"))
 			m = parse(&s[1]);
-		else if (0 == n.compare("servers_total"))
+		else if (boost::ends_with(b, "servers_total"))
 			a = parse(&s[1]);
 	}
 	int s = pclose(z);
