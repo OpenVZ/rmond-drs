@@ -2,6 +2,7 @@
 #include "system.h"
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace Rmond
 {
@@ -163,59 +164,70 @@ struct License: Value::Storage
 
 	void refresh(PRL_HANDLE h_);
 private:
-	void ves(PRL_HANDLE event_);
+	static PRL_UINT32 parse(const char* value_);
 
 	PRL_HANDLE m_host;
 	tupleWP_type m_tuple;
 };
 
-void License::ves(PRL_HANDLE event_)
+PRL_UINT32 License::parse(const char* value_)
 {
-	PRL_UINT32 n = 0, v = 0;
-	PrlEvent_GetParamsCount(event_, &n);
-	while (n-- > 0)
-	{
-		PRL_HANDLE p = PRL_INVALID_HANDLE;
-		PRL_RESULT r = PrlEvent_GetParam(event_, n, &p);
-		if (PRL_FAILED(r))
-			continue;
+	if (boost::starts_with(value_, "\"unlimited\""))
+		return 65535;
+	if (boost::starts_with(value_, "\"combined\""))
+		return 0;
 
-		std::string b = Sdk::getString(boost::bind(&PrlEvtPrm_GetName, p, _1, _2));
-		if (0 == b.compare("vzlicense_vms_total"))
-		{
-			r = PrlEvtPrm_ToUint32(p, &v);
-			PrlHandle_Free(p);
-			break;
-		}
-		PrlHandle_Free(p);
-	}
-	tupleSP_type t = m_tuple.lock();
-	if (NULL != t.get())
-		t->put<LICENSE_VES>(v);
+	return strtoul(value_, NULL, 10);
 }
 
 void License::refresh(PRL_HANDLE h_)
 {
-	PRL_STR s = NULL;
-	PRL_RESULT r = PrlLic_ToString(h_, (PRL_VOID_PTR_PTR)&s);
-	if (PRL_FAILED(r) || s == NULL)
+	tupleSP_type t = m_tuple.lock();
+	if (NULL == t.get())
 		return;
 
-	PRL_HANDLE v = PRL_INVALID_HANDLE;
-	r = PrlSrv_CreateVm(m_host, &v);
-	if (PRL_SUCCEEDED(r))
+	t->put<LICENSE_CTS>(0);
+	t->put<LICENSE_VMS>(0);
+	t->put<LICENSE_VES>(0);
+	FILE* z = popen("vzlicview -a --class VZSRV", "r");
+	if (NULL == z)
 	{
-		PRL_HANDLE e = PRL_INVALID_HANDLE;
-		r = PrlVm_CreateAnswerEvent(v, &e, 0);
-		if (PRL_SUCCEEDED(r = PrlVm_CreateAnswerEvent(v, &e, 0)) &&
-			PRL_SUCCEEDED(r = PrlEvent_FromString(e, s)))
-		{
-			ves(e);
-		}
-		PrlHandle_Free(e);
-		PrlHandle_Free(v);
+		snmp_log(LOG_ERR, LOG_PREFIX"cannot start vzlicview\n");
+		return;
 	}
-	PrlBuffer_Free(s);
+	std::ostringstream e;
+	PRL_UINT32 v = 0, m = 0, a = 0;
+	while (!feof(z) && e.tellp() < 1024)
+	{
+		char b[128] = {};
+		if (NULL == fgets(b, sizeof(b), z))
+			continue;
+		e << b;
+		char* s = strchr(b, '=');
+		if (NULL == s)
+			continue;
+		s[0] = 0;
+		std::string n = b;
+		boost::trim(n);
+		if (0 == n.compare("ct_total"))
+			v = parse(&s[1]);
+		else if (0 == n.compare("nr_vms"))
+			m = parse(&s[1]);
+		else if (0 == n.compare("servers_total"))
+			a = parse(&s[1]);
+	}
+	int s = pclose(z);
+	if (0 == s)
+	{
+		t->put<LICENSE_CTS>(v);
+		t->put<LICENSE_VMS>(m);
+		t->put<LICENSE_VES>(0 == a ? std::min(m + v, 65535U) : a);
+	}
+	else
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"vzlicview status %d(%d):\n%s\n",
+				WEXITSTATUS(s), s, e.str().c_str());
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
