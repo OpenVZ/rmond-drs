@@ -140,6 +140,43 @@ void Name::refresh(PRL_HANDLE h_)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// struct Type
+
+struct Type: Value::Storage
+{
+	explicit Type(tupleSP_type data_): m_data(data_)
+	{
+	}
+
+	void refresh(PRL_HANDLE h_);
+	static bool extract(PRL_HANDLE h_, PRL_VM_TYPE& dst_);
+private:
+	tupleWP_type m_data;
+};
+
+void Type::refresh(PRL_HANDLE h_)
+{
+	tupleSP_type y = m_data.lock();
+	if (NULL != y.get())
+	{
+		PRL_VM_TYPE x = PVT_VM;
+		extract(h_, x);
+		y->put<TYPE>(x);
+	}
+}
+
+bool Type::extract(PRL_HANDLE h_, PRL_VM_TYPE& dst_)
+{
+	PRL_VM_TYPE t = PVT_VM;
+	PRL_RESULT e = PrlVmCfg_GetVmType(h_, &t);
+	if (PRL_FAILED(e))
+		return true;
+
+	dst_ = t;
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // struct State
 
 struct State: Value::Storage
@@ -198,8 +235,7 @@ private:
 FILE* Provenance::shaman(PRL_HANDLE h_, tupleSP_type ve_)
 {
 	PRL_VM_TYPE t = PVT_VM;
-	PRL_RESULT e = PrlVmCfg_GetVmType(h_, &t);
-	if (PRL_FAILED(e))
+	if (Type::extract(h_, t))
 		return NULL;
 
 	std::string x;
@@ -984,6 +1020,7 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		Disk::System d(ve_, m_tuple, space_);
 		Perspective<Network::TABLE> n(m_tuple, space_.get<2>());
 		// state
+		addState(new Type(m_tuple));
 		addState(new Name(m_tuple));
 		addState(new State(ve_, m_tuple));
 		addState(new Provenance(m_tuple));

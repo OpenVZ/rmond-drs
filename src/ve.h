@@ -22,7 +22,8 @@ enum TABLE
 	CPU_LIMIT,
 	CPU_UNITS,
 	CPU_SYSTEM,
-	CPU_USER
+	CPU_USER,
+	TYPE
 };
 
 namespace Disk
@@ -60,6 +61,7 @@ enum TABLE
 template<>
 struct Schema<VE::TABLE>: mpl::vector<
 			Declaration<VE::TABLE, VE::VEID, ASN_OCTET_STR>,
+			Declaration<VE::TABLE, VE::TYPE, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::NAME, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::STATE, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::PERFECT_NODE, ASN_OCTET_STR>,
