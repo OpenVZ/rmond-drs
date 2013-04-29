@@ -86,6 +86,22 @@ rmond	MODULE-IDENTITY
 			"The VE limit from the host license"
 		::= { rmond 3 }
 
+	rmondLicenseCtNumber OBJECT-TYPE
+		SYNTAX INTEGER
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The CT limit from the host license"
+		::= { rmond 4 }
+
+	rmondLicenseVmNumber OBJECT-TYPE
+		SYNTAX INTEGER
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VM limit from the host license"
+		::= { rmond 5 }
+
 
 	rmondSinxTable OBJECT-TYPE	
 	SYNTAX SEQUENCE OF rmondSinkEntry
@@ -232,8 +248,9 @@ rmond	MODULE-IDENTITY
 
 	rmondVeTableEntryType ::= SEQUENCE {
 		rmondVeId DisplayString,
+		rmondVeType INTEGER,
 		rmondVeName DisplayString,
-		rmondVeState ,
+		rmondVeState INTEGER,
 		rmondVePerfectNode DisplayString,
 		rmondVeMemoryTotal Counter64,
 		rmondVeMemoryUsage Counter64,
@@ -382,6 +399,17 @@ rmond	MODULE-IDENTITY
 			"The CPU user usage inside the VE"
 
 		::= { rmondVeTableEntry 13 }
+
+	rmondVeType OBJECT-TYPE
+                SYNTAX INTEGER {vm(0),
+				ct(1) }
+
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VE type"
+
+		::= { rmondVeTableEntry 14 }
 
 	rmondVeDiskTable OBJECT-TYPE
 	SYNTAX SEQUENCE OF rmondVeDiskTableEntry
