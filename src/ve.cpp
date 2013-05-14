@@ -185,34 +185,55 @@ struct State: Value::Storage
 	{
 	}
 
+	void extract(PRL_HANDLE h_);
 	void refresh(PRL_HANDLE h_);
 private:
+	void put(VIRTUAL_MACHINE_STATE value_);
+
 	PRL_HANDLE m_ve;
 	tupleWP_type m_data;
 };
 
-void State::refresh(PRL_HANDLE h_)
+void State::put(VIRTUAL_MACHINE_STATE value_)
 {
 	tupleSP_type y = m_data.lock();
 	if (NULL == y.get())
 		return;
 
-	PRL_HANDLE r = Sdk::getAsyncResult(PrlVm_GetState(h_));
+	if (VMS_RUNNING == value_ && value_ != y->get<STATE>())
+	{
+		PRL_HANDLE j = PrlVm_SubscribeToPerfStats(m_ve, "*");
+		PRL_RESULT e = PrlJob_Wait(j, UINT_MAX);
+		(void)e;
+		PrlHandle_Free(j);
+	}
+	y->put<STATE>(value_);
+}
+
+void State::extract(PRL_HANDLE h_)
+{
+	PRL_HANDLE p = PRL_INVALID_HANDLE;
+	PRL_RESULT r = PrlEvent_GetParamByName(h_, "vminfo_vm_state", &p);
+	if (PRL_SUCCEEDED(r))
+	{
+		PRL_UINT32 v = 0;
+		r = PrlEvtPrm_ToUint32(p, &v);
+		put((VIRTUAL_MACHINE_STATE)v);
+		PrlHandle_Free(p);
+	}
+}
+
+void State::refresh(PRL_HANDLE h_)
+{
+	PRL_HANDLE r = Sdk::getAsyncResult(PrlVm_GetState(m_ve));
 	if (PRL_INVALID_HANDLE == r)
 		return;
 
 	VIRTUAL_MACHINE_STATE s;
 	PRL_RESULT e = PrlVmInfo_GetState(r, &s);
 	if (PRL_SUCCEEDED(e))
-	{
-		if (VMS_RUNNING == s && s != y->get<STATE>())
-		{
-			PRL_HANDLE j = PrlVm_SubscribeToPerfStats(m_ve, "*");
-			e = PrlJob_Wait(j, UINT_MAX);
-			PrlHandle_Free(j);
-		}
-		y->put<STATE>(s);
-	}
+		put(s);
+
 	PrlHandle_Free(r);
 }
 
@@ -1009,7 +1030,7 @@ void Traffic::refresh(PRL_HANDLE h_)
 // struct Unit
 
 Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& space_):
-	Environment(ve_), m_tuple(new table_type::tuple_type(key_)),
+	Environment(ve_), m_state(NULL), m_tuple(new table_type::tuple_type(key_)),
 	m_table(space_.get<0>())
 {
 	tableSP_type t = m_table.lock();
@@ -1020,9 +1041,10 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		Disk::System d(ve_, m_tuple, space_);
 		Perspective<Network::TABLE> n(m_tuple, space_.get<2>());
 		// state
+		m_state = new State(ve_, m_tuple);
+		addState(m_state);
 		addState(new Type(m_tuple));
 		addState(new Name(m_tuple));
-		addState(new State(ve_, m_tuple));
 		addState(new Provenance(m_tuple));
 		addState(new CPU::Number(m_tuple));
 		addState(new CPU::Limit(m_tuple));
@@ -1080,6 +1102,12 @@ void Unit::pullUsage()
 		refresh(r);
 		PrlHandle_Free(r);
 	}
+}
+
+void Unit::state(PRL_HANDLE event_)
+{
+	if (NULL != m_state)
+		m_state->extract(event_);
 }
 
 bool Unit::inject(space_type& dst_)

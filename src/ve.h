@@ -142,6 +142,7 @@ typedef boost::tuple<tableSP_type,
 		boost::shared_ptr<Table::Unit<Disk::TABLE> >,
 		boost::shared_ptr<Table::Unit<Network::TABLE> > > space_type;
 
+struct State;
 ///////////////////////////////////////////////////////////////////////////////
 // struct Unit
 
@@ -152,10 +153,12 @@ struct Unit: Environment
 
 	void pullState();
 	void pullUsage();
+	void state(PRL_HANDLE event_);
 	bool uuid(std::string& dst_) const;
 
 	static bool inject(space_type& dst_);
 private:
+	State* m_state;
 	tupleSP_type m_tuple;
 	tableWP_type m_table;
 };

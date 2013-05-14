@@ -28,6 +28,7 @@ struct Server: boost::enable_shared_from_this<Server>, Details::Automat<Server, 
 {
 	void pull(PRL_HANDLE event_);
 	void erase(PRL_HANDLE event_);
+	void state(PRL_HANDLE event_);
 	void detach(PRL_HANDLE event_);
 	void performance(PRL_HANDLE event_);
 
@@ -42,9 +43,17 @@ struct Server: boost::enable_shared_from_this<Server>, Details::Automat<Server, 
 			Row<PET_DSP_EVT_VM_DELETED, &Server::erase>,
 			Row<PET_DSP_EVT_VM_UNREGISTERED, &Server::erase>,
 			Row<PET_DSP_EVT_VM_ADDED, &Server::pull>,
-			Row<PET_DSP_EVT_VM_STATE_CHANGED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_STATE_CHANGED, &Server::state>,
 			Row<PET_DSP_EVT_VM_CONFIG_CHANGED, &Server::pull>,
 			Row<PET_DSP_EVT_VM_STARTED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_STOPPED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_TOOLS_STATE_CHANGED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_MIGRATE_FINISHED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_PAUSED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_SUSPENDED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_RESETED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_ABORTED, &Server::pull>,
+			Row<PET_DSP_EVT_VM_MIGRATE_STARTED, &Server::pull>,
 			Row<PET_DSP_EVT_VM_CONTINUED, &Server::pull>,
 			Row<PET_DSP_EVT_VM_RESUMED, &Server::pull>
 		>::type table_type;
@@ -253,6 +262,14 @@ void Server::pull(PRL_HANDLE event_)
 		s->push(Handler::Snatch(u, g_big));
 }
 
+void Server::state(PRL_HANDLE event_)
+{
+	Lock g(g_big);
+	veMap_type::iterator v = m_ves.second.find(Sdk::getIssuerId(event_));
+	if (m_ves.second.end() != v)
+		v->second->state(event_);
+}
+
 void Server::performance(PRL_HANDLE event_)
 {
 	PRL_EVENT_ISSUER_TYPE t;
@@ -261,41 +278,39 @@ void Server::performance(PRL_HANDLE event_)
 		return;
 
 	PRL_UINT32 n = 0;
+	boost::shared_ptr<Environment> e;
 	r = PrlEvent_GetParamsCount(event_, &n);
 	Lock g(g_big);
 	switch (t)
 	{
 	case PIE_DISPATCHER:
-	{
-		if (NULL == m_host.second.get())
-			return;
-		while(n-- > 0)
-		{
-			PRL_HANDLE p = PRL_INVALID_HANDLE;
-			r = PrlEvent_GetParam(event_, n, &p);
-			if (PRL_FAILED(r))
-				continue;
-			m_host.second->refresh(p);
-			PrlHandle_Free(p);
-		}
-	}
+		e = m_host.second;
+		break;
 	case PIE_VIRTUAL_MACHINE:
 	{
 		veMap_type::iterator v = m_ves.second.find(Sdk::getIssuerId(event_));
-		if (m_ves.second.end() == v)
-			return;
-		while(n-- > 0)
+		if (m_ves.second.end() != v)
 		{
-			PRL_HANDLE p = PRL_INVALID_HANDLE;
-			r = PrlEvent_GetParam(event_, n, &p);
-			if (PRL_FAILED(r))
-				continue;
-			v->second->refresh(p);
-			PrlHandle_Free(p);
+			e = v->second;
+			break;
 		}
 	}
 	default:
 		return;
+	}
+	if (NULL == e.get())
+		return;
+	if (~0U == n)
+		return e->refresh(event_);
+
+	while(n-- > 0)
+	{
+		PRL_HANDLE p = PRL_INVALID_HANDLE;
+		r = PrlEvent_GetParam(event_, n, &p);
+		if (PRL_FAILED(r))
+			continue;
+		e->refresh(p);
+		PrlHandle_Free(p);
 	}
 }
 
