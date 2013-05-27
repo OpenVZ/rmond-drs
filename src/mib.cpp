@@ -447,47 +447,36 @@ namespace Sink
 ///////////////////////////////////////////////////////////////////////////////
 // struct Inform
 
-void Inform::push(const Unit& target_) const
+void Inform::push(table_type::tupleSP_type target_) const
 {
-	netsnmp_session* s = target_.session();
-	if (NULL == s)
+	ServerSP z = m_server.lock();
+	if (NULL == z.get())
 		return;
 
-	int n = target_.limit(), i = 0;
-	ServerSP z = m_server.lock();
-	if (NULL != z.get())
-	{
-		boost::ptr_list<Value::Provider> d;
-		z->snapshot(target_.metrix(), d);
-		netsnmp_variable_list a = {}, *b = &a;
-		BOOST_FOREACH(const Value::Provider& p, d)
-		{
-			netsnmp_variable_list* v = p.make();
-			if (NULL == v)
-				continue;
-			b->next_variable = v;
-			for (; b->next_variable != NULL; b = b->next_variable) {}
-			if (++i < n)
-				continue;
+	Unit u(target_, m_metrix);
+	if (u.bad())
+		return;
 
-			netsnmp_pdu* u = Value::Trap::pdu(target_.ticket(a.next_variable));
-			if (NULL != u)
-			{
-				send_trap_to_sess(s, u);
-				snmp_free_pdu(u);
-			}
-			i = 0;
-			b = &a;
-			a.next_variable = NULL;
-		}
-		netsnmp_pdu* u = Value::Trap::pdu(target_.ticket(a.next_variable));
-		if (NULL != u)
-		{
-			send_trap_to_sess(s, u);
-			snmp_free_pdu(u);
-		}
+	int n = u.limit(), i = 0;
+	boost::ptr_list<Value::Provider> d;
+	z->snapshot(u.metrix(), d);
+	netsnmp_variable_list a = {}, *b = &a;
+	BOOST_FOREACH(const Value::Provider& p, d)
+	{
+		netsnmp_variable_list* v = p.make();
+		if (NULL == v)
+			continue;
+		b->next_variable = v;
+		for (; b->next_variable != NULL; b = b->next_variable) {}
+		if (++i < n)
+			continue;
+
+		u.push(a.next_variable);
+		i = 0;
+		b = &a;
+		a.next_variable = NULL;
 	}
-	snmp_close(s);
+	u.push(a.next_variable);
 }
 
 } // namespace Sink
