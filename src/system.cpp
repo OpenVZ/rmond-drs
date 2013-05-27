@@ -53,7 +53,7 @@ std::string Sdk::getIssuerId(PRL_HANDLE event_)
 ///////////////////////////////////////////////////////////////////////////////
 // struct Lock
 
-Lock::Lock(pthread_mutex_t& mutex_): m_mutex(&mutex_)
+Lock::Lock(pthread_mutex_t& mutex_): m_idle(true), m_mutex(&mutex_)
 {
 	if (enter())
 		m_mutex = NULL;
@@ -70,7 +70,7 @@ bool Lock::enter()
 		snmp_log(LOG_ERR, LOG_PREFIX"cannot enter the critical section: 0x%x\n", e);
 		return true;
 	}
-	return false;
+	return m_idle = false;
 }
 
 bool Lock::leave()
@@ -78,11 +78,15 @@ bool Lock::leave()
 	if (NULL == m_mutex)
 		return true;
 
-	int e = pthread_mutex_unlock(m_mutex);
-	if (0 != e)
+	if (!m_idle)
 	{
-		snmp_log(LOG_ERR, LOG_PREFIX"cannot leave the critical section: 0x%x\n", e);
-		return true;
+		int e = pthread_mutex_unlock(m_mutex);
+		if (0 != e)
+		{
+			snmp_log(LOG_ERR, LOG_PREFIX"cannot leave the critical section: 0x%x\n", e);
+			return true;
+		}
+		m_idle = true;
 	}
 	return false;
 }

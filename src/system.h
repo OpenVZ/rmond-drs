@@ -28,6 +28,7 @@ struct Lock
 	bool enter();
 	bool leave();
 private:
+	bool m_idle;
 	pthread_mutex_t* m_mutex;
 };
 
