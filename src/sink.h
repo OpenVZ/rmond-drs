@@ -117,18 +117,20 @@ typedef boost::shared_ptr<Reaper> ReaperSP;
 
 struct Unit
 {
-	Unit(table_type::tupleSP_type tuple_, Metrix::tableWP_type metrix_):
-		m_metrix(metrix_), m_tuple(tuple_)
-	{
-	}
+	Unit(table_type::tupleSP_type tuple_, Metrix::tableWP_type metrix_);
+	~Unit();
 
+	bool bad() const
+	{
+		return NULL == m_session;
+	}
 	unsigned limit() const;
-	netsnmp_session* session() const;
 	Value::Metrix_type metrix() const;
-	netsnmp_variable_list* ticket(netsnmp_variable_list* list_) const;
+	bool push(netsnmp_variable_list* list_) const;
 
 	static ReaperSP inject(ServerSP server_);
 private:
+	void* m_session;
 	Metrix::tableWP_type m_metrix;
 	table_type::tupleSP_type m_tuple;
 };
@@ -143,7 +145,7 @@ struct Inform
 
 	void operator()() const;
 private:
-	void push(const Unit& ) const;
+	void push(table_type::tupleSP_type target_) const;
 
 	ServerWP m_server;
 	Metrix::tableWP_type m_metrix;

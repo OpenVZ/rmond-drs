@@ -46,6 +46,29 @@ namespace Sink
 ///////////////////////////////////////////////////////////////////////////////
 // struct Unit
 
+Unit::Unit(table_type::tupleSP_type tuple_, Metrix::tableWP_type metrix_):
+	m_session(NULL), m_metrix(metrix_), m_tuple(tuple_)
+{
+	if (NULL == m_tuple.get() || m_tuple->get<PORT>() == 0)
+		return;
+
+	netsnmp_session x = {};
+	snmp_sess_init(&x);
+	std::ostringstream y;
+	y << "udp:" << m_tuple->get<HOST>() << ":" << m_tuple->get<PORT>();
+	std::string z = y.str();
+	x.version = SNMP_VERSION_2c;
+	x.peername = &z[0];
+	x.remote_port = m_tuple->get<PORT>();
+
+	m_session = snmp_sess_open(&x);
+}
+
+Unit::~Unit()
+{
+	snmp_sess_close(m_session);
+}
+
 unsigned Unit::limit() const
 {
 	if (NULL == m_tuple.get())
@@ -72,23 +95,6 @@ Value::Metrix_type Unit::metrix() const
 	return output;
 }
 
-netsnmp_session* Unit::session() const
-{
-	if (NULL == m_tuple.get() || m_tuple->get<PORT>() == 0)
-		return NULL;
-
-	netsnmp_session x = {};
-	snmp_sess_init(&x);
-	std::ostringstream y;
-	y << "udp:" << m_tuple->get<HOST>() << ":" << m_tuple->get<PORT>();
-	std::string z = y.str();
-	x.version = SNMP_VERSION_2c;
-	x.peername = &z[0];
-	x.remote_port = m_tuple->get<PORT>();
-
-	return snmp_open(&x);
-}
-
 ReaperSP Unit::inject(ServerSP server_)
 {
 	typedef Table::Handler::Mutable<TABLE, Actor> handler_type;
@@ -106,18 +112,32 @@ ReaperSP Unit::inject(ServerSP server_)
 	return output;
 }
 
-netsnmp_variable_list* Unit::ticket(netsnmp_variable_list* list_) const
+bool Unit::push(netsnmp_variable_list* list_) const
 {
-	if (NULL == m_tuple.get() || m_tuple->get<TICKET>().empty())
-		return list_;
+	if (NULL == m_session)
+	{
+		snmp_free_varbind(list_);
+		return true;
+	}
+	netsnmp_variable_list* x = list_;
+	if (NULL != m_tuple.get() && !m_tuple->get<TICKET>().empty())
+	{
+		netsnmp_variable_list* y = 
+			Value::Cell::Unit<Sink::TABLE, Sink::TICKET>(m_tuple).make();
+		if (NULL != y)
+		{
+			y->next_variable = x;
+			x = y;
+		}
+	}
+	netsnmp_pdu* u = Value::Trap::pdu(x);
+	if (NULL == u)
+		return true;
+	if (0 != snmp_sess_async_send(m_session, u, NULL, NULL))
+		return false;
 
-	netsnmp_variable_list* output = 
-		Value::Cell::Unit<Sink::TABLE, Sink::TICKET>(m_tuple).make();
-	if (NULL == output)
-		return list_;
-
-	output->next_variable = list_;
-	return output;
+	snmp_free_pdu(u);
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -139,7 +159,7 @@ void Inform::operator()() const
 	if (0 == a)
 		return;
 
-	push(Unit(t, m_metrix));
+	push(t);
 	t->put<ACKS>(a - 1);
 	Central::schedule(t->get<Sink::PERIOD>(), *this);
 }
