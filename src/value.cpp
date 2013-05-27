@@ -103,6 +103,7 @@ netsnmp_pdu* Trap::pdu(netsnmp_variable_list* data_)
 		}
 		snmp_log(LOG_ERR, LOG_PREFIX"\n\n");
 #endif // 0
+		u->version = SNMP_VERSION_2c;
 		return u;
 	}
 	snmp_free_pdu(u);
