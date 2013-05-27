@@ -91,6 +91,7 @@ netsnmp_pdu* Trap::pdu(netsnmp_variable_list* data_)
 			break;
 
 		h->next_variable = data_;
+#if 0
 		for (h = u->variables; h != NULL; h = h->next_variable)
 		{
 			std::ostringstream o;
@@ -101,6 +102,7 @@ netsnmp_pdu* Trap::pdu(netsnmp_variable_list* data_)
 			snmp_log(LOG_ERR, LOG_PREFIX"varbind int the trap %s\n", o.str().c_str());
 		}
 		snmp_log(LOG_ERR, LOG_PREFIX"\n\n");
+#endif // 0
 		return u;
 	}
 	snmp_free_pdu(u);
