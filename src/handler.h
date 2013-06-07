@@ -146,32 +146,12 @@ void Unit<T>::reserve()
 		return cannotExtract();
 
 	row_type r = row();
-	if (schema_type::ROW_STATUS == c->colnum)
+	do
 	{
-		int v = 0;
-		Asn::Policy::Integer<ASN_INTEGER>::put(*m_request->requestvb, v);
-		switch (v)
-		{
-		case RS_CREATEANDGO:
-		case RS_CREATEANDWAIT:
-			if (NULL != r.get())
-				return cannot(SNMP_ERR_INCONSISTENTVALUE);
-
-			r.reset(new typename table_type::tuple_type(c));
-			if (NULL == r.get())
-				return cannotInsert();
-
-			r->template put<schema_type::ROW_STATUS>(RS_NOTINSERVICE);
-			if (m_table->insert(r))
-				return cannotInsert();
-		case RS_DESTROY:
+		if (schema_type::ROW_STATUS == c->colnum)
+			break;
+		if (NULL == r.get())
 			return;
-		default:
-			return cannot(SNMP_ERR_WRONGVALUE);
-		}
-	}
-	else if (NULL != r.get())
-	{
 		netsnmp_variable_list* v = SNMP_MALLOC_TYPEDEF(netsnmp_variable_list);
 		if (NULL == v)
 			return;
@@ -181,7 +161,31 @@ void Unit<T>::reserve()
 			::free(v);
 			return cannot(SNMP_NOSUCHOBJECT);
 		}
-		push(TOKEN_PREFIX"backup", v);
+		return push(TOKEN_PREFIX"backup", v);
+	} while(false);
+	int v = 0;
+	Asn::Policy::Integer<ASN_INTEGER>::put(*m_request->requestvb, v);
+	switch (v)
+	{
+	case RS_CREATEANDGO:
+	case RS_CREATEANDWAIT:
+		if (NULL != r.get())
+		{
+			if (RS_ACTIVE != r->template get<schema_type::ROW_STATUS>())
+				cannot(SNMP_ERR_INCONSISTENTVALUE);
+			return;
+		}
+		r.reset(new typename table_type::tuple_type(c));
+		if (NULL == r.get())
+			return cannotInsert();
+
+		r->template put<schema_type::ROW_STATUS>(RS_NOTINSERVICE);
+		if (m_table->insert(r))
+			return cannotInsert();
+	case RS_DESTROY:
+		return;
+	default:
+		return cannot(SNMP_ERR_WRONGVALUE);
 	}
 }
 
