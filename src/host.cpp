@@ -344,6 +344,8 @@ bool Unit::inject(space_type& dst_)
 void Unit::ves(unsigned ves_)
 {
 	m_data->put<LOCAL_VES>(ves_);
+	// there is no max_ves limit yet, thus we need to report 'unlimited'
+	m_data->put<LIMIT_VES>(65535);
 }
 
 } // namespace Host
