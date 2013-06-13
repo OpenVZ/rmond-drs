@@ -9,7 +9,7 @@ namespace Host
 {
 enum PROPERTY
 {
-	LOCAL_VES = 1,
+	LOCAL_VES = 101,
 	LIMIT_VES,
 	LICENSE_VES,
 	LICENSE_CTS,
