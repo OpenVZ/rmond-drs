@@ -68,7 +68,7 @@ rmond	MODULE-IDENTITY
 		STATUS current
 		DESCRIPTION
 			"The number of VEs at the host"
-		::= { rmond 1 }
+		::= { rmond 101 }
 
 	rmondVeLimit OBJECT-TYPE
 		SYNTAX INTEGER
@@ -76,7 +76,7 @@ rmond	MODULE-IDENTITY
 		STATUS current
 		DESCRIPTION
 			"The user configured VE limit"
-		::= { rmond 2 }
+		::= { rmond 102 }
 
 	rmondLicenseVeNumber OBJECT-TYPE
 		SYNTAX INTEGER
@@ -84,7 +84,7 @@ rmond	MODULE-IDENTITY
 		STATUS current
 		DESCRIPTION
 			"The VE limit from the host license"
-		::= { rmond 3 }
+		::= { rmond 103 }
 
 	rmondLicenseCtNumber OBJECT-TYPE
 		SYNTAX INTEGER
@@ -92,7 +92,7 @@ rmond	MODULE-IDENTITY
 		STATUS current
 		DESCRIPTION
 			"The CT limit from the host license"
-		::= { rmond 4 }
+		::= { rmond 104 }
 
 	rmondLicenseVmNumber OBJECT-TYPE
 		SYNTAX INTEGER
@@ -100,7 +100,7 @@ rmond	MODULE-IDENTITY
 		STATUS current
 		DESCRIPTION
 			"The VM limit from the host license"
-		::= { rmond 5 }
+		::= { rmond 105 }
 
 
 	rmondSinxTable OBJECT-TYPE	
