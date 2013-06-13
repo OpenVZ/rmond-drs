@@ -157,6 +157,10 @@ void Inject::operator()(T) const
 
 struct License: Value::Storage
 {
+	enum
+	{
+		NOLIMIT = 65535U
+	};
 	License(PRL_HANDLE host_, tupleSP_type tuple_):
 		m_host(host_), m_tuple(tuple_)
 	{
@@ -173,7 +177,7 @@ private:
 PRL_UINT32 License::parse(const char* value_)
 {
 	if (boost::starts_with(value_, "\"unlimited\""))
-		return 65535;
+		return NOLIMIT;
 	if (boost::starts_with(value_, "\"combined\""))
 		return 0;
 
@@ -219,7 +223,7 @@ void License::refresh(PRL_HANDLE h_)
 	{
 		t->put<LICENSE_CTS>(v);
 		t->put<LICENSE_VMS>(m);
-		t->put<LICENSE_VES>(0 == a ? std::min(m + v, 65535U) : a);
+		t->put<LICENSE_VES>(0 == a ? std::min<PRL_UINT32>(m + v, NOLIMIT) : a);
 	}
 	else
 	{
@@ -345,7 +349,7 @@ void Unit::ves(unsigned ves_)
 {
 	m_data->put<LOCAL_VES>(ves_);
 	// there is no max_ves limit yet, thus we need to report 'unlimited'
-	m_data->put<LIMIT_VES>(65535);
+	m_data->put<LIMIT_VES>(License::NOLIMIT);
 }
 
 } // namespace Host
