@@ -12,7 +12,7 @@ namespace Policy
 void IP::get(in_addr_t src_, netsnmp_variable_list& dst_)
 {
 	u_long n = htonl(src_);
-	snmp_set_var_typed_value(&dst_, ASN_IPADDRESS, (u_char* )&n, sizeof(n));
+	snmp_set_var_typed_value(&dst_, ASN_IPADDRESS, (u_char* )&n, sizeof(in_addr_t));
 }
 
 void IP::put(const netsnmp_variable_list& src_, in_addr_t& dst_)
