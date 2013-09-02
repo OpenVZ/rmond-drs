@@ -5,6 +5,7 @@
 #include <boost/foreach.hpp>
 #include <boost/shared_array.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/functional/hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace
@@ -705,8 +706,11 @@ struct Policy
 
 struct System: Perspective<TABLE>
 {
+	typedef Perspective<TABLE>::table_type::key_type key_type;
+
 	System(PRL_HANDLE ve_, VE::tupleSP_type parent_, const VE::space_type& space_);
 
+	key_type uuid(const std::string& name_) const;
 	std::string device(PRL_MASS_STORAGE_INTERFACE_TYPE type_, PRL_UINT32 index_) const;
 private:
 	PRL_HANDLE m_ve;
@@ -728,6 +732,17 @@ std::string System::device(PRL_MASS_STORAGE_INTERFACE_TYPE type_, PRL_UINT32 ind
 			return p->name();
 	}
 	return std::string();
+}
+
+System::key_type System::uuid(const std::string& name_) const
+{
+	key_type output = Perspective<TABLE>::uuid();
+	size_t h = 0xDEADF00D;
+	boost::hash_combine(h, output.get<VE::TABLE, VE::VEID>());
+	boost::hash_combine(h, name_);
+	output.put<HASH1>(h);
+	output.put<HASH2>(h >> 32);
+	return output;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -757,9 +772,9 @@ void Space::refresh(PRL_HANDLE h_)
 		std::string n = p->name();
 		if (n.empty())
 			continue;
-		table_type::key_type k = m_system.uuid();
-		k.put<NAME>(n);
+		table_type::key_type k = m_system.uuid(n);
 		tupleSP_type t(new tupleSP_type::value_type(k));
+		t->put<NAME>(n);
 		t->put<USAGE>(p->getUsedBytes());
 		t->put<TOTAL>(p->getUsedBytes() + p->getFreeBytes());
 		x[n] = t;
@@ -855,12 +870,12 @@ tupleSP_type Io::take(const std::string& counter_)
 	if (n.empty())
 		return tupleSP_type();
 
-	table_type::key_type k = m_system.uuid();
-	k.put<NAME>(n);
+	table_type::key_type k = m_system.uuid(n);
 	tupleSP_type output = z->find(k);
 	if (NULL == output.get())
 	{
 		output.reset(new tupleSP_type::value_type(k));
+		output->put<NAME>(n);
 		if (z->insert(output))
 			output.reset();
 	}

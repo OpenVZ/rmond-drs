@@ -36,7 +36,9 @@ enum TABLE
 	READ_REQUESTS,
 	WRITE_REQUESTS,
 	READ_BYTES,
-	WRITE_BYTES
+	WRITE_BYTES,
+	HASH1,
+	HASH2
 };
 
 } // namespace Disk
@@ -90,6 +92,8 @@ struct Schema<VE::TABLE>: mpl::vector<
 
 template<>
 struct Schema<VE::Disk::TABLE>: mpl::vector<
+			Declaration<VE::Disk::TABLE, VE::Disk::HASH1, ASN_COUNTER>,
+			Declaration<VE::Disk::TABLE, VE::Disk::HASH2, ASN_COUNTER>,
 			Declaration<VE::Disk::TABLE, VE::Disk::NAME, ASN_OCTET_STR>,
 			Declaration<VE::Disk::TABLE, VE::Disk::TOTAL, ASN_COUNTER64>,
 			Declaration<VE::Disk::TABLE, VE::Disk::USAGE, ASN_COUNTER64>,
@@ -101,7 +105,8 @@ struct Schema<VE::Disk::TABLE>: mpl::vector<
 {
 	typedef mpl::vector<
 			mpl::integral_c<VE::TABLE, VE::VEID>,
-			mpl::integral_c<VE::Disk::TABLE, VE::Disk::NAME>
+			mpl::integral_c<VE::Disk::TABLE, VE::Disk::HASH1>,
+			mpl::integral_c<VE::Disk::TABLE, VE::Disk::HASH2>
 		> index_type;
 
 	static Oid_type uuid();

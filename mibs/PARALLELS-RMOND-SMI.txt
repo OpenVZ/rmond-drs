@@ -426,10 +426,12 @@ rmond	MODULE-IDENTITY
 		DESCRIPTION
 			"The VE storage parameters"
 
-		INDEX { rmondVeId, rmondVeDiskName }
+		INDEX { rmondVeId, rmondVeDiskHash1, rmondVeDiskHash2 }
 		::= { rmondVeDiskTable 1 }
 
 	rmondVeDiskTableEntryType ::= SEQUENCE {
+		rmondVeDiskHash1 Counter32,
+		rmondVeDiskHash2 Counter32,
 		rmondVeDiskName DisplayString,
 		rmondVeDiskTotal Counter64,
 		rmondVeDiskUsage Counter64,
@@ -501,6 +503,24 @@ rmond	MODULE-IDENTITY
 			"The VE storage write rate"
 
 		::= { rmondVeDiskTableEntry 7 }
+
+	rmondVeDiskHash1 OBJECT-TYPE
+		SYNTAX Counter32
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The low-order 32 bits of the device name hash"
+
+		::= { rmondVeDiskTableEntry 8 }
+
+	rmondVeDiskHash2 OBJECT-TYPE
+		SYNTAX Counter32
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The high-order 32 bits of the device name hash"
+
+		::= { rmondVeDiskTableEntry 9 }
 
 	rmondVeNetworkTable OBJECT-TYPE
 	SYNTAX SEQUENCE OF rmondVeNetworkTableEntry
