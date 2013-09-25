@@ -2,7 +2,14 @@
 #include "system.h"
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/assign/list_of.hpp>
 #include <boost/algorithm/string.hpp>
+
+extern netsnmp_session* main_session;
+extern "C"
+{
+int handle_pdu(netsnmp_agent_session* );
+};
 
 namespace Rmond
 {
@@ -75,6 +82,46 @@ VE::Unit* make(PRL_HANDLE h_, const VE::space_type& ves_)
 	VE::table_type::key_type k;
 	k.put<VE::VEID>(u);
 	return new VE::Unit(h_, k, ves_);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Proxy
+
+struct Proxy: Value::Composite::Base
+{
+	explicit Proxy(const Oid_type& name_);
+
+	Value::Provider* snapshot(const Value::Metrix_type& metrix_) const;
+private:
+	Oid_type m_name;
+};
+
+Proxy::Proxy(const Oid_type& name_): m_name(name_)
+{
+}
+
+Value::Provider* Proxy::snapshot(const Value::Metrix_type& metrix_) const
+{
+	if (!metrix_.empty() && metrix_.count(m_name) == 0)
+		return NULL;
+
+	netsnmp_pdu* u = snmp_pdu_create(SNMP_MSG_GET);
+	if (NULL == u)
+		return NULL;
+
+	Value::Provider* output = NULL;
+	snmp_add_null_var(u, &m_name[0], m_name.size());
+	u->flags |= UCD_MSG_FLAG_ALWAYS_IN_VIEW;
+	netsnmp_agent_session* s = init_agent_snmp_session(main_session, u);
+	snmp_free_pdu(u);
+	int e = handle_pdu(s);
+	if (SNMP_ERR_NOERROR == e)
+	{
+		output = new Value::Named(m_name, s->pdu->variables);
+		s->pdu->variables = NULL;
+	}
+	free_agent_snmp_session(s);
+	return output;
 }
 
 } // namespace
@@ -246,6 +293,9 @@ Unit::Unit(PRL_HANDLE host_, const space_type& space_):
 	addUsage(new License(host_, m_data));
 	// report
 	addValue(new Value::Composite::Scalar<PROPERTY>(m_data));
+	// proxies
+	Oid_type o = boost::assign::list_of<oid>(1)(3)(6)(1)(4)(1)(2021)(4)(5)(0);
+	addValue(new Proxy(o));
 }
 
 Unit::~Unit()

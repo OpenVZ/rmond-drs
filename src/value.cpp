@@ -125,10 +125,32 @@ netsnmp_variable_list* Trap::make() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// struct Trivial
+
+Trivial::Trivial(netsnmp_variable_list* value_): m_value(value_)
+{
+}
+
+Trivial::~Trivial()
+{
+	snmp_free_varbind(m_value);
+}
+
+netsnmp_variable_list* Trivial::make() const
+{
+	return snmp_clone_varbind(m_value);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // struct Named
 
 Named::Named(const name_type& name_, Provider* value_):
 	m_name(name_), m_value(value_)
+{
+}
+
+Named::Named(const name_type& name_, netsnmp_variable_list* value_):
+	m_name(name_), m_value(new Trivial(value_))
 {
 }
 

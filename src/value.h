@@ -33,6 +33,19 @@ struct Trap: Provider
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// struct Trivial
+
+struct Trivial: Provider
+{
+	explicit Trivial(netsnmp_variable_list* value_);
+	~Trivial();
+
+	netsnmp_variable_list* make() const;
+private:
+	netsnmp_variable_list* m_value;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // struct Named
 
 struct Named: Provider
@@ -40,6 +53,7 @@ struct Named: Provider
 	typedef Oid_type name_type;
 
 	Named(const name_type& name_, Provider* value_);
+	Named(const name_type& name_, netsnmp_variable_list* value_);
 	Named(const oid* name_, size_t length_, Provider* value_);
 
 	netsnmp_variable_list* make() const;
