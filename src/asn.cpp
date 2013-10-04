@@ -25,8 +25,10 @@ void IP::put(const netsnmp_variable_list& src_, in_addr_t& dst_)
 
 void Counter::get(unsigned long long src_, netsnmp_variable_list& dst_)
 {
-	snmp_set_var_typed_value(&dst_, ASN_COUNTER64,
-		(u_char* )&src_, sizeof(counter64));
+	counter64 x;
+	x.low = src_ & 0xffffffff;
+	x.high = src_ >> 32;
+	snmp_set_var_typed_value(&dst_, ASN_COUNTER64, (u_char* )&x, sizeof(counter64));
 }
 
 void Counter::put(const netsnmp_variable_list& src_, unsigned long long& dst_)
