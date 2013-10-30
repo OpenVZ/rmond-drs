@@ -367,7 +367,7 @@ Scheduler::UnitSP Central::s_scheduler;
 bool Central::init()
 {
 	PRL_RESULT e = PrlApi_Init(PARALLELS_API_VER);
-	if (PRL_FAILED(e))
+	if (PRL_FAILED(e) && e != PRL_ERR_DOUBLE_INIT)
 	{
 		snmp_log(LOG_ERR, LOG_PREFIX"cannot init the PrlSDK: 0x%x\n", e);
 		return true;
@@ -381,7 +381,7 @@ bool Central::init()
 			{
 				snmp_log(LOG_ERR, LOG_PREFIX"the MIB has "
 						"already been initialized\n");
-				break;
+				return false;
 			}
 			ServerSP s = Server::inject();
 			if (NULL == s.get())
