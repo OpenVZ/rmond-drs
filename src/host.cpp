@@ -268,9 +268,9 @@ void License::refresh(PRL_HANDLE h_)
 	int s = pclose(z);
 	if (0 == s)
 	{
-		t->put<LICENSE_CTS>(v);
-		t->put<LICENSE_VMS>(m);
-		t->put<LICENSE_VES>(0 == a ? std::min<PRL_UINT32>(m + v, NOLIMIT) : a);
+		t->put<LICENSE_CTS>(a ? : v);
+		t->put<LICENSE_VMS>(a ? : m);
+		t->put<LICENSE_VES>(a ? : std::min<PRL_UINT32>(m + v, NOLIMIT));
 	}
 	else
 	{
