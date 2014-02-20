@@ -593,6 +593,15 @@ rmond	MODULE-IDENTITY
 
 		::= { rmondVeNetworkTableEntry 5 }
 
+	rmondVeNetworkMacAddress OBJECT-TYPE
+		SYNTAX DisplayString(SIZE(1..12))
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"A MAC address of the VE network interface"
+
+		::= { rmondVeNetworkTableEntry 6 }
+
 	rmondTrap NOTIFICATION-TYPE
 		STATUS  current
 		DESCRIPTION

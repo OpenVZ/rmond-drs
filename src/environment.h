@@ -30,17 +30,22 @@ protected:
 	{
 		m_providerList.push_back(value_);
 	}
-	void addUsage(Value::Storage* value_)
+	void addEventUsage(Value::Storage* value_)
 	{
-		m_usageList.push_back(value_);
+		m_eventList.push_back(value_);
+	}
+	void addQueryUsage(Value::Storage* value_)
+	{
+		m_queryList.push_back(value_);
 	}
 private:
 	typedef boost::ptr_list<Value::Storage> valueList_type;
 	typedef boost::ptr_list<Value::Composite::Base> providerList_type;
 
 	PRL_HANDLE m_h;
+	valueList_type m_eventList;
+	valueList_type m_queryList;
 	valueList_type m_stateList;
-	valueList_type m_usageList;
 	providerList_type m_providerList;
 };
 

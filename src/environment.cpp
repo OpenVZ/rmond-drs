@@ -25,7 +25,21 @@ void Environment::pullState()
 
 void Environment::refresh(PRL_HANDLE performance_)
 {
-	BOOST_FOREACH(valueList_type::reference r, m_usageList)
+	PRL_HANDLE_TYPE t;
+	if (PRL_FAILED(PrlHandle_GetType(performance_, &t)))
+		return;
+
+	valueList_type* v = NULL;
+	switch (t)
+	{
+	case PHT_EVENT:
+	case PHT_EVENT_PARAMETER:
+		v = &m_eventList;
+		break;
+	default:
+		v = &m_queryList;
+	}
+	BOOST_FOREACH(valueList_type::reference r, *v)
 	{
 		r.refresh(performance_);
 	}

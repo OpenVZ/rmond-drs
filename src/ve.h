@@ -51,7 +51,8 @@ enum TABLE
 	IN_BYTES,
 	OUT_BYTES,
 	IN_PACKETS,
-	OUT_PACKETS
+	OUT_PACKETS,
+	MAC
 };
 
 } // namespace Network
@@ -123,7 +124,8 @@ struct Schema<VE::Network::TABLE>: mpl::vector<
 			Declaration<VE::Network::TABLE, VE::Network::IN_BYTES, ASN_COUNTER64>,
 			Declaration<VE::Network::TABLE, VE::Network::OUT_BYTES, ASN_COUNTER64>,
 			Declaration<VE::Network::TABLE, VE::Network::IN_PACKETS, ASN_COUNTER64>,
-			Declaration<VE::Network::TABLE, VE::Network::OUT_PACKETS, ASN_COUNTER64> >
+			Declaration<VE::Network::TABLE, VE::Network::OUT_PACKETS, ASN_COUNTER64>,
+			Declaration<VE::Network::TABLE, VE::Network::MAC, ASN_OCTET_STR> >
 
 {
 	typedef mpl::vector<

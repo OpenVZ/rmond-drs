@@ -290,7 +290,7 @@ Unit::Unit(PRL_HANDLE host_, const space_type& space_):
 	(void)e;
 	PrlHandle_Free(j);
 	// usage
-	addUsage(new License(host_, m_data));
+	addQueryUsage(new License(host_, m_data));
 	// report
 	addValue(new Value::Composite::Scalar<PROPERTY>(m_data));
 	// proxies
