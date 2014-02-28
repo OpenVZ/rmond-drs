@@ -135,9 +135,13 @@ void Name::refresh(PRL_HANDLE h_)
 	if (NULL == y.get())
 		return;
 
-	std::string n = Sdk::getString(boost::bind(&PrlVmCfg_GetName, h_, _1, _2));
-	if (!n.empty())
-		y->put<NAME>(n);
+	std::string x;
+	x = Sdk::getString(boost::bind(&PrlVmCfg_GetName, h_, _1, _2));
+	if (!x.empty())
+		y->put<NAME>(x);
+	x = Sdk::getString(boost::bind(&PrlVmCfg_GetUuid, h_, _1, _2));
+	if (!x.empty())
+		y->put<UUID>(x);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

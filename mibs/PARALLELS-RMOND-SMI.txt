@@ -411,6 +411,15 @@ rmond	MODULE-IDENTITY
 
 		::= { rmondVeTableEntry 14 }
 
+	rmondVeUuid OBJECT-TYPE
+		SYNTAX DisplayString(SIZE(1..39))
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VE UUID reported by the dispatcher"
+
+		::= { rmondVeTableEntry 15 }
+
 	rmondVeDiskTable OBJECT-TYPE
 	SYNTAX SEQUENCE OF rmondVeDiskTableEntry
 		MAX-ACCESS not-accessible

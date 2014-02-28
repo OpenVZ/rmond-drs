@@ -23,7 +23,8 @@ enum TABLE
 	CPU_UNITS,
 	CPU_SYSTEM,
 	CPU_USER,
-	TYPE
+	TYPE,
+	UUID
 };
 
 namespace Disk
@@ -66,6 +67,7 @@ struct Schema<VE::TABLE>: mpl::vector<
 			Declaration<VE::TABLE, VE::VEID, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::TYPE, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::NAME, ASN_OCTET_STR>,
+			Declaration<VE::TABLE, VE::UUID, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::STATE, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::PERFECT_NODE, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::MEMORY_TOTAL, ASN_COUNTER64>,
