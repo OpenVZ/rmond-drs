@@ -260,7 +260,9 @@ rmond	MODULE-IDENTITY
 		rmondVeCpuLimit INTEGER,
 		rmondVeCpuUnits INTEGER,
 		rmondVeCpuSystem INTEGER,
-		rmondVeCpuUser INTEGER
+		rmondVeCpuUser INTEGER,
+		rmondVeType INTEGER,
+		rmondVeUuid DisplayString
 	}
 
 	rmondVeId OBJECT-TYPE
@@ -554,7 +556,8 @@ rmond	MODULE-IDENTITY
 		rmondVeNetworkInBytes Counter64,
 		rmondVeNetworkOutBytes Counter64,
 		rmondVeNetworkInPackets Counter64,
-		rmondVeNetworkOutPackets Counter64
+		rmondVeNetworkOutPackets Counter64,
+		rmondVeNetworkMacAddress DisplayString
 	}
 
 	rmondVeNetworkInterface OBJECT-TYPE
