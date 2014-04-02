@@ -105,7 +105,7 @@ void Link::operator()() const
 		if (PRL_INVALID_HANDLE == j)
 			break;
 
-		e = PrlJob_Wait(j, UINT_MAX);
+		e = PrlJob_Wait(j, Sdk::TIMEOUT);
 		if (PRL_FAILED(e))
 			break;
 

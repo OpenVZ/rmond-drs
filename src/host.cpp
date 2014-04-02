@@ -310,7 +310,7 @@ VE::UnitSP Unit::find(const std::string& id_, const VE::space_type& ves_) const
 {
 	VE::UnitSP output;
 	PRL_HANDLE j = PrlSrv_GetVmConfig(h(), id_.c_str(), PGVC_SEARCH_BY_UUID);
-	PRL_RESULT e = PrlJob_Wait(j, UINT_MAX);
+	PRL_RESULT e = PrlJob_Wait(j, Sdk::TIMEOUT);
 	if (PRL_SUCCEEDED(e))
 	{
 		PRL_HANDLE r, u;
@@ -337,7 +337,7 @@ bool Unit::list(std::list<VE::UnitSP>& dst_, const VE::space_type& ves_) const
 	PRL_HANDLE r = PRL_INVALID_HANDLE;
 	do
 	{
-		PRL_RESULT e = PrlJob_Wait(j, UINT_MAX);
+		PRL_RESULT e = PrlJob_Wait(j, Sdk::TIMEOUT);
 		if (PRL_FAILED(e))
 			break;
 

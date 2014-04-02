@@ -30,7 +30,7 @@ PRL_HANDLE Sdk::getAsyncResult(PRL_HANDLE job_)
 		return PRL_INVALID_HANDLE;
 
 	PRL_HANDLE output = PRL_INVALID_HANDLE;
-	PRL_RESULT e = PrlJob_Wait(job_, UINT_MAX);
+	PRL_RESULT e = PrlJob_Wait(job_, TIMEOUT);
 	if (PRL_SUCCEEDED(e))
 	{
 		PRL_HANDLE r;

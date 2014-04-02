@@ -315,7 +315,7 @@ void Provenance::refresh(PRL_HANDLE h_)
 	int s = pclose(p);
 	if (0 != s)
 	{
-		snmp_log(LOG_ERR, LOG_PREFIX"schaman status %d(%d):\n%s\n",
+		snmp_log(LOG_ERR, LOG_PREFIX"shaman status %d(%d):\n%s\n",
 				WEXITSTATUS(s), s, e.str().c_str());
 	}
 }
@@ -1361,7 +1361,7 @@ void Unit::pullState()
 	if (PRL_INVALID_HANDLE == j)
 		return;
 
-	PRL_RESULT e = PrlJob_Wait(j, UINT_MAX);
+	PRL_RESULT e = PrlJob_Wait(j, Sdk::TIMEOUT);
 	if (PRL_SUCCEEDED(e))
 		Environment::pullState();
 
