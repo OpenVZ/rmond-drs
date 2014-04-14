@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <parallels-virtualization-sdk/PrlPerfCounters.h>
 
 namespace
 {
@@ -320,12 +321,14 @@ void Provenance::refresh(PRL_HANDLE h_)
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// struct Memory
-
-struct Memory: Value::Storage
+namespace Memory
 {
-	explicit Memory(tupleSP_type data_): m_data(data_)
+///////////////////////////////////////////////////////////////////////////////
+// struct Query
+
+struct Query: Value::Storage
+{
+	explicit Query(tupleSP_type data_): m_data(data_)
 	{
 	}
 
@@ -334,7 +337,7 @@ private:
 	tupleWP_type m_data;
 };
 
-void Memory::refresh(PRL_HANDLE h_)
+void Query::refresh(PRL_HANDLE h_)
 {
 	tupleSP_type y = m_data.lock();
 	if (NULL == y.get())
@@ -357,6 +360,40 @@ void Memory::refresh(PRL_HANDLE h_)
 	if (PRL_SUCCEEDED(r))
 		y->put<SWAP_USAGE>(x);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Event
+
+struct Event: Value::Storage
+{
+	explicit Event(tupleSP_type data_): m_data(data_)
+	{
+	}
+
+	void refresh(PRL_HANDLE h_);
+private:
+	tupleWP_type m_data;
+};
+
+void Event::refresh(PRL_HANDLE h_)
+{
+	std::string n = Sdk::getString(boost::bind(&PrlEvtPrm_GetName, h_, _1, _2));
+	if (0 != n.compare(PRL_GUEST_RAM_USAGE_PTRN))
+		return;
+
+	table_type::tupleSP_type t = m_data.lock();
+	if (NULL == t.get())
+		return;
+
+	PRL_UINT64 u = 0;
+	PRL_RESULT r = PrlEvtPrm_ToUint64(h_, &u);
+	if (PRL_FAILED(r) || u == 0)
+		return;
+
+	t->put<MEMORY_USAGE>(u);
+}
+
+} // namespace Memory
 
 namespace CPU
 {
@@ -1324,7 +1361,8 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		addState(new CPU::Limit(m_tuple));
 		addState(new CPU::Units(m_tuple));
 		// usage
-		addQueryUsage(new Memory(m_tuple));
+		addQueryUsage(new Memory::Query(m_tuple));
+		addEventUsage(new Memory::Event(m_tuple));
 		addEventUsage(new Disk::Io(ve_, d));
 		addQueryUsage(new Disk::Space(d));
 		addQueryUsage(new Network::Traffic::Query(ve_, n));
