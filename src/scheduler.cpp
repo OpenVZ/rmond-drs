@@ -3,6 +3,22 @@
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 
+namespace std
+{
+///////////////////////////////////////////////////////////////////////////////
+// struct less
+
+template<>
+bool less<timespec>::operator()(const timespec& left_, const timespec& right_) const
+{
+	if (left_.tv_sec > right_.tv_sec)
+		return false;
+
+	return left_.tv_sec < right_.tv_sec || left_.tv_nsec < right_.tv_nsec;
+};
+
+} // namespace std
+
 namespace Rmond
 {
 namespace Scheduler
@@ -21,7 +37,7 @@ Queue::~Queue()
 
 struct State
 {
-	typedef std::multimap<boost::system_time, Queue::job_type> queue_type;
+	typedef std::multimap<timespec, Queue::job_type> queue_type;
 
 	queue_type queue;
 	ConditionalVariable condvar;
@@ -125,7 +141,9 @@ bool Unit::push(unsigned when_, const job_type& job_)
 	if (0 == m_consumer)
 		return true;
 
-	boost::system_time w = boost::get_system_time() + boost::posix_time::seconds(when_);
+	timespec w;
+	clock_gettime(CLOCK_MONOTONIC, &w);
+	w.tv_sec += when_;
 	m_state->queue.insert(std::make_pair(w, job_));
 	m_state->condvar.signal();
 	return false;

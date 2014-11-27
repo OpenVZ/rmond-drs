@@ -96,7 +96,13 @@ bool Lock::leave()
 
 ConditionalVariable::ConditionalVariable()
 {
-	pthread_cond_init(&m_impl, NULL);
+	pthread_condattr_t a;
+	pthread_condattr_init(&a);
+	int e = pthread_condattr_setclock(&a, CLOCK_MONOTONIC);
+	if (0 != e)
+		snmp_log(LOG_ERR, LOG_PREFIX"cannot set the clock: 0x%x\n", e);
+
+	pthread_cond_init(&m_impl, &a);
 }
 
 ConditionalVariable::~ConditionalVariable()
@@ -121,13 +127,9 @@ bool ConditionalVariable::wait(pthread_mutex_t& mutex_)
 	return false;
 }
 
-bool ConditionalVariable::wait(pthread_mutex_t& mutex_, const boost::system_time& barrier_)
+bool ConditionalVariable::wait(pthread_mutex_t& mutex_, timespec barrier_)
 {
-	struct timespec b = {0, 0};
-	boost::posix_time::time_duration const u = barrier_ - boost::posix_time::from_time_t(0);
-	b.tv_sec = u.total_seconds();
-	b.tv_nsec = (long)(u.fractional_seconds()*(1000000000l/u.ticks_per_second()));
-	int e = pthread_cond_timedwait(&m_impl, &mutex_, &b);
+	int e = pthread_cond_timedwait(&m_impl, &mutex_, &barrier_);
 	if (ETIMEDOUT == e)
 		return false;
 	if (0 != e)

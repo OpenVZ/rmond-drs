@@ -45,7 +45,7 @@ struct ConditionalVariable: boost::noncopyable
 	~ConditionalVariable();
 
 	bool wait(pthread_mutex_t& mutex_);
-	bool wait(pthread_mutex_t& mutex_, const boost::system_time& barrier_);
+	bool wait(pthread_mutex_t& mutex_, timespec barrier_);
 	void signal();
 private:
 	pthread_cond_t m_impl;
