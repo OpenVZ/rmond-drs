@@ -9,6 +9,7 @@ namespace
 {
 std::map<uintptr_t, Rmond::ServerSP> g_active;
 pthread_mutex_t g_big = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t g_ves = PTHREAD_MUTEX_INITIALIZER;
 
 } // namespace
 
@@ -120,35 +121,45 @@ void Link::operator()() const
 	reschedule();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// struct Snatch
-
-struct Snatch
+namespace Snatch
 {
-	Snatch(boost::shared_ptr<Environment> environment_, pthread_mutex_t& lock_, bool state_ = true):
-		m_state(state_), m_lock(&lock_), m_environment(environment_)
+///////////////////////////////////////////////////////////////////////////////
+// struct Unit
+
+struct Unit
+{
+	typedef void (* impl_type)(boost::shared_ptr<Environment>);
+
+	Unit(boost::shared_ptr<Environment> environment_, impl_type impl_):
+		m_impl(impl_), m_environment(environment_)
 	{
 	}
 
 	void operator()() const
 	{
 		boost::shared_ptr<Environment> e = m_environment.lock();
-		if (NULL == e.get())
-			return;
-
-		Lock g(*m_lock);
-		if (m_state)
-			e->pullState();
-
-		e->pullUsage();
-		g.leave();
-		Central::schedule(COLLECT_TIMEOUT, Snatch(e, *m_lock, false));
+		if (NULL != e.get())
+			m_impl(e);
 	}
 private:
-	bool m_state;
-	pthread_mutex_t* m_lock;
+	impl_type m_impl;
 	boost::weak_ptr<Environment> m_environment;
 };
+
+void pullState(boost::shared_ptr<Environment> ve_)
+{
+	Lock g(g_ves);
+	ve_->pullState();
+}
+
+void pullUsage(boost::shared_ptr<Environment> ve_)
+{
+	Lock g(g_ves);
+	ve_->pullUsage();
+	Central::schedule(COLLECT_TIMEOUT, Unit(ve_, &pullUsage));
+}
+
+} // namespace Snatch
 
 ///////////////////////////////////////////////////////////////////////////////
 // struct Reaper
@@ -207,7 +218,8 @@ bool Server::attach(PRL_HANDLE host_)
 
 	m_psdk = host_;
 	m_host.second.reset(h.release());
-	s->push(Handler::Snatch(m_host.second, g_big));
+	s->push(Handler::Snatch::Unit(m_host.second, &Handler::Snatch::pullState));
+	s->push(Handler::Snatch::Unit(m_host.second, &Handler::Snatch::pullUsage));
 	BOOST_FOREACH(const VE::UnitSP& x, a)
 	{
 		std::string u;
@@ -215,7 +227,8 @@ bool Server::attach(PRL_HANDLE host_)
 			continue;
 
 		m_ves.second[u] = x;
-		s->push(Handler::Snatch(x, g_big));
+		s->push(Handler::Snatch::Unit(x, &Handler::Snatch::pullState));
+		s->push(Handler::Snatch::Unit(x, &Handler::Snatch::pullUsage));
 	}
 	m_host.second->ves(m_ves.second.size());
 	g_active[(uintptr_t)this] = shared_from_this();
@@ -242,24 +255,32 @@ void Server::detach(PRL_HANDLE )
 void Server::pull(PRL_HANDLE event_)
 {
 	SchedulerSP s = Central::scheduler();
-	Lock g(g_big);
 	std::string d = Sdk::getIssuerId(event_);
+	Lock g(g_big);
 	veMap_type::iterator p = m_ves.second.find(d);
 	if (m_ves.second.end() != p)
-		return p->second->pullState();
+	{
+		VE::UnitSP u = p->second;
+		if (NULL != s.get() && u.get() != NULL)
+			s->push(Handler::Snatch::Unit(u, &Handler::Snatch::pullState));
 
-	if (NULL == m_host.second.get())
+		return;
+	}
+	Host::UnitSP h = m_host.second;
+	g.leave();
+	if (NULL == h.get())
 		return;
 
-	VE::UnitSP u = m_host.second->find(d, m_ves.first);
+	VE::UnitSP u = h->find(d, m_ves.first);
 	if (NULL == u.get())
 		return;
 
 	u->pullState();
+	g.enter();
 	m_ves.second[d] = u;
 	m_host.second->ves(m_ves.second.size());
 	if (NULL != s.get())
-		s->push(Handler::Snatch(u, g_big));
+		s->push(Handler::Snatch::Unit(u, &Handler::Snatch::pullUsage));
 }
 
 void Server::state(PRL_HANDLE event_)
@@ -323,10 +344,11 @@ void Server::erase(PRL_HANDLE event_)
 
 void Server::snapshot(const Value::Metrix_type& metrix_, boost::ptr_list<Value::Provider>& dst_) const
 {
-	Lock g(g_big);
+	Lock a(g_big);
 	if (NULL == m_host.second.get())
 		return;
 
+	Lock b(g_ves);
 	Value::Provider* h = m_host.second->snapshot(metrix_);
 	if (NULL != h)
 		dst_.push_back(h);
