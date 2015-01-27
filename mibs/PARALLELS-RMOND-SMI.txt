@@ -19,8 +19,11 @@ parallelsMIB MODULE-IDENTITY
 			E-mail: adm@parallels.com"
 	DESCRIPTION
 		"The Structure of Management Information for Parallels products."
+	
+	REVISION "201304260000Z"	-- 26 April 2013
+		DESCRIPTION
+		"Initial version"
 	::= { enterprises 26171 }
-
 --
 -- Parallels MIB tree structure
 --
@@ -42,9 +45,9 @@ END
 PARALLELS-RMOND-SMI DEFINITIONS ::= BEGIN
 
 IMPORTS
-	MODULE-IDENTITY, OBJECT-TYPE, IpAddress, Unsigned32, NOTIFICATION-TYPE, Counter64
+	MODULE-IDENTITY, OBJECT-TYPE, IpAddress, Unsigned32, Counter32, NOTIFICATION-TYPE, Counter64
 		FROM SNMPv2-SMI
-	TEXTUAL-CONVENTION, DisplayString, TruthValue
+	TEXTUAL-CONVENTION, DisplayString, TruthValue, RowStatus
 		FROM SNMPv2-TC
 	parallelsProducts, parallelsTraps
 		FROM PARALLELS-SMI;
@@ -103,8 +106,8 @@ rmond	MODULE-IDENTITY
 		::= { rmond 105 }
 
 
-	rmondSinxTable OBJECT-TYPE	
-	SYNTAX SEQUENCE OF rmondSinkEntry
+	rmondSinkTable OBJECT-TYPE	
+		SYNTAX SEQUENCE OF RmondSinkEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -112,23 +115,23 @@ rmond	MODULE-IDENTITY
 		::= { rmond 51 }
 
 	rmondSinkEntry OBJECT-TYPE
-		SYNTAX rmondSinkEntryType
+		SYNTAX RmondSinkEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The trap subscriber parameters"
 
 		INDEX { rmondSinkHost, rmondSinkPort }
-		::= { rmondSinxTable 1 }
+		::= { rmondSinkTable 1 }
 
-	rmondSinkEntryType ::= SEQUENCE {
+	RmondSinkEntryType ::= SEQUENCE {
 		rmondSinkHost DisplayString,
 		rmondSinkPort Unsigned32,
 		rmondSinkPeriod Unsigned32,
 		rmondSinkLimit Unsigned32,
 		rmondSinkAcks Unsigned32,
-		rmondSinkTicket DisplayString,
-		rmondSinkStatus RowStatus
+		rmondSinkStatus RowStatus,
+		rmondSinkTicket DisplayString
 	}
 
 	rmondSinkHost OBJECT-TYPE
@@ -172,14 +175,6 @@ rmond	MODULE-IDENTITY
 			"Total reports"
 		::= { rmondSinkEntry 5 }
 
-	rmondSinkTicket OBJECT-TYPE
-		SYNTAX DisplayString(SIZE(1..128))
-		MAX-ACCESS read-create
-		STATUS current
-		DESCRIPTION
-			"The opaque user data"
-		::= { rmondSinkEntry 7 }
-
 	rmondSinkStatus OBJECT-TYPE
 		SYNTAX RowStatus
 		MAX-ACCESS read-create
@@ -188,8 +183,16 @@ rmond	MODULE-IDENTITY
 			"The status of this conceptual row"
 		::= { rmondSinkEntry 6 }
 
-	rmondMetrixTable OBJECT-TYPE	
-	SYNTAX SEQUENCE OF rmondMetricEntry
+	rmondSinkTicket OBJECT-TYPE
+		SYNTAX DisplayString(SIZE(1..128))
+		MAX-ACCESS read-create
+		STATUS current
+		DESCRIPTION
+			"The opaque user data"
+		::= { rmondSinkEntry 7 }
+
+	rmondMetricTable OBJECT-TYPE	
+		SYNTAX SEQUENCE OF RmondMetricEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -197,16 +200,16 @@ rmond	MODULE-IDENTITY
 		::= { rmond 52 }
 
 	rmondMetricEntry OBJECT-TYPE
-		SYNTAX rmondMetricEntryType
+		SYNTAX RmondMetricEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The metric parameters"
 
 		INDEX { rmondSinkHost, rmondSinkPort, rmondMetric }
-		::= { rmondMetrixTable 1 }
+		::= { rmondMetricTable 1 }
 
-	rmondMetricEntryType ::= SEQUENCE {
+	RmondMetricEntryType ::= SEQUENCE {
 		rmondMetric OBJECT IDENTIFIER,
 		rmondMetricStatus RowStatus
 	}
@@ -229,7 +232,7 @@ rmond	MODULE-IDENTITY
 
 
 	rmondVeTable OBJECT-TYPE
-	SYNTAX SEQUENCE OF rmondVeTableEntry
+		SYNTAX SEQUENCE OF RmondVeTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -237,7 +240,7 @@ rmond	MODULE-IDENTITY
 		::= { rmond 55 }
 
 	rmondVeTableEntry OBJECT-TYPE
-		SYNTAX rmondVeTableEntryType
+		SYNTAX RmondVeTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -246,7 +249,7 @@ rmond	MODULE-IDENTITY
 		INDEX { rmondVeId }
 		::= { rmondVeTable 1 }
 
-	rmondVeTableEntryType ::= SEQUENCE {
+	RmondVeTableEntryType ::= SEQUENCE {
 		rmondVeId DisplayString,
 		rmondVeType INTEGER,
 		rmondVeName DisplayString,
@@ -423,7 +426,7 @@ rmond	MODULE-IDENTITY
 		::= { rmondVeTableEntry 15 }
 
 	rmondVeDiskTable OBJECT-TYPE
-	SYNTAX SEQUENCE OF rmondVeDiskTableEntry
+		SYNTAX SEQUENCE OF RmondVeDiskTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -431,7 +434,7 @@ rmond	MODULE-IDENTITY
 		::= { rmond 56 }
 
 	rmondVeDiskTableEntry OBJECT-TYPE
-		SYNTAX rmondVeDiskTableEntryType
+		SYNTAX RmondVeDiskTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -440,7 +443,7 @@ rmond	MODULE-IDENTITY
 		INDEX { rmondVeId, rmondVeDiskHash1, rmondVeDiskHash2 }
 		::= { rmondVeDiskTable 1 }
 
-	rmondVeDiskTableEntryType ::= SEQUENCE {
+	RmondVeDiskTableEntryType ::= SEQUENCE {
 		rmondVeDiskHash1 Counter32,
 		rmondVeDiskHash2 Counter32,
 		rmondVeDiskName DisplayString,
@@ -534,7 +537,7 @@ rmond	MODULE-IDENTITY
 		::= { rmondVeDiskTableEntry 9 }
 
 	rmondVeNetworkTable OBJECT-TYPE
-	SYNTAX SEQUENCE OF rmondVeNetworkTableEntry
+		SYNTAX SEQUENCE OF RmondVeNetworkTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -542,7 +545,7 @@ rmond	MODULE-IDENTITY
 		::= { rmond 57 }
 
 	rmondVeNetworkTableEntry OBJECT-TYPE
-		SYNTAX rmondVeNetworkTableEntryType
+		SYNTAX RmondVeNetworkTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
@@ -551,7 +554,7 @@ rmond	MODULE-IDENTITY
 		INDEX { rmondVeId, rmondVeNetworkInterface }
 		::= { rmondVeNetworkTable 1 }
 
-	rmondVeNetworkTableEntryType ::= SEQUENCE {
+	RmondVeNetworkTableEntryType ::= SEQUENCE {
 		rmondVeNetworkInterface DisplayString,
 		rmondVeNetworkInBytes Counter64,
 		rmondVeNetworkOutBytes Counter64,
