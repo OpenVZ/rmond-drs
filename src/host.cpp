@@ -199,39 +199,79 @@ void Inject::operator()(T) const
 
 } // namespace Scalar
 
+namespace License
+{
 ///////////////////////////////////////////////////////////////////////////////
-// struct License
+// struct Counter
 
-struct License: Value::Storage
+struct Counter
 {
 	enum
 	{
 		NOLIMIT = 65535U
 	};
-	License(PRL_HANDLE host_, tupleSP_type tuple_):
+
+	explicit Counter() :
+		m_usage(0), m_limit(0)
+	{
+	}
+
+	explicit Counter(PRL_UINT32 usage_, PRL_UINT32 limit_) :
+		m_usage(usage_), m_limit(limit_)
+	{
+	}
+
+	PRL_UINT32 getLimit() const
+	{
+		return m_limit;
+	}
+
+	PRL_UINT32 getUsage() const
+	{
+		return m_usage;
+	}
+
+	static Counter parse(const char *value_);
+
+private:
+	PRL_UINT32 m_usage;
+	PRL_UINT32 m_limit;
+};
+
+Counter Counter::parse(const char* value_)
+{
+	PRL_UINT32 l = 0, u = 0;
+
+	if (boost::starts_with(value_, "\"unlimited\""))
+		l = NOLIMIT;
+	else if (!boost::starts_with(value_, "\"combined\""))
+		l = strtoul(value_, NULL, 10);
+
+	const char* const s = strchr(value_, '(');
+	if (NULL != s)
+		u = strtoul(&s[1], NULL, 10);
+	return Counter(u, l);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Unit
+
+struct Unit: Value::Storage
+{
+	Unit(PRL_HANDLE host_, tupleSP_type tuple_):
 		m_host(host_), m_tuple(tuple_)
 	{
 	}
 
 	void refresh(PRL_HANDLE h_);
 private:
-	static PRL_UINT32 parse(const char* value_);
 
 	PRL_HANDLE m_host;
 	tupleWP_type m_tuple;
 };
 
-PRL_UINT32 License::parse(const char* value_)
-{
-	if (boost::starts_with(value_, "\"unlimited\""))
-		return NOLIMIT;
-	if (boost::starts_with(value_, "\"combined\""))
-		return 0;
 
-	return strtoul(value_, NULL, 10);
-}
-
-void License::refresh(PRL_HANDLE h_)
+void Unit::refresh(PRL_HANDLE h_)
 {
 	tupleSP_type t = m_tuple.lock();
 	if (NULL == t.get())
@@ -247,7 +287,8 @@ void License::refresh(PRL_HANDLE h_)
 		return;
 	}
 	std::ostringstream e;
-	PRL_UINT32 v = 0, m = 0, a = 0;
+	PRL_UINT32 a = 0;
+	Counter v, m;
 	while (!feof(z) && e.tellp() < 1024)
 	{
 		char b[128] = {};
@@ -259,18 +300,21 @@ void License::refresh(PRL_HANDLE h_)
 			continue;
 		s[0] = 0;
 		if (boost::ends_with(b, "ct_total"))
-			v = parse(&s[1]);
+			v =  Counter::parse(&s[1]);
 		else if (boost::ends_with(b, "nr_vms"))
-			m = parse(&s[1]);
+			m = Counter::parse(&s[1]);
 		else if (boost::ends_with(b, "servers_total"))
-			a = parse(&s[1]);
+			a = Counter::parse(&s[1]).getLimit();
 	}
 	int s = pclose(z);
 	if (0 == s)
 	{
-		t->put<LICENSE_CTS>(a ? : v);
-		t->put<LICENSE_VMS>(a ? : m);
-		t->put<LICENSE_VES>(a ? : std::min<PRL_UINT32>(m + v, NOLIMIT));
+		t->put<LICENSE_CTS>(a ? : v.getLimit());
+		t->put<LICENSE_VMS>(a ? : m.getLimit());
+		t->put<LICENSE_VES>(a ? : std::min<PRL_UINT32>(
+					m.getLimit() + v.getLimit(), Counter::NOLIMIT));
+		t->put<LICENSE_CTS_USAGE>(v.getUsage());
+		t->put<LICENSE_VMS_USAGE>(m.getUsage());
 	}
 	else
 	{
@@ -278,6 +322,8 @@ void License::refresh(PRL_HANDLE h_)
 				WEXITSTATUS(s), s, e.str().c_str());
 	}
 }
+
+} // namespace License
 
 ///////////////////////////////////////////////////////////////////////////////
 // struct Unit
@@ -290,7 +336,7 @@ Unit::Unit(PRL_HANDLE host_, const space_type& space_):
 	(void)e;
 	PrlHandle_Free(j);
 	// usage
-	addQueryUsage(new License(host_, m_data));
+	addQueryUsage(new License::Unit(host_, m_data));
 	// report
 	addValue(new Value::Composite::Scalar<PROPERTY>(m_data));
 	// proxies
@@ -399,7 +445,7 @@ void Unit::ves(unsigned ves_)
 {
 	m_data->put<LOCAL_VES>(ves_);
 	// there is no max_ves limit yet, thus we need to report 'unlimited'
-	m_data->put<LIMIT_VES>(License::NOLIMIT);
+	m_data->put<LIMIT_VES>(License::Counter::NOLIMIT);
 }
 
 } // namespace Host

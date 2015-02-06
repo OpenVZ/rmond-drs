@@ -13,7 +13,9 @@ enum PROPERTY
 	LIMIT_VES,
 	LICENSE_VES,
 	LICENSE_CTS,
-	LICENSE_VMS
+	LICENSE_VMS,
+	LICENSE_CTS_USAGE,
+	LICENSE_VMS_USAGE,
 };
 
 } // namespace Host
@@ -27,7 +29,9 @@ struct Schema<Host::PROPERTY>: mpl::vector<
 			Declaration<Host::PROPERTY, Host::LIMIT_VES, ASN_INTEGER>,
 			Declaration<Host::PROPERTY, Host::LICENSE_VES, ASN_INTEGER>,
 			Declaration<Host::PROPERTY, Host::LICENSE_CTS, ASN_INTEGER>,
-			Declaration<Host::PROPERTY, Host::LICENSE_VMS, ASN_INTEGER> >
+			Declaration<Host::PROPERTY, Host::LICENSE_VMS, ASN_INTEGER>,
+			Declaration<Host::PROPERTY, Host::LICENSE_CTS_USAGE, ASN_INTEGER>,
+			Declaration<Host::PROPERTY, Host::LICENSE_VMS_USAGE, ASN_INTEGER> >
 
 {
 	static const char* name();

@@ -105,6 +105,21 @@ rmond	MODULE-IDENTITY
 			"The VM limit from the host license"
 		::= { rmond 105 }
 
+	rmondLicenseCtUsage OBJECT-TYPE
+		SYNTAX INTEGER
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The CT usage from the host license"
+		::= { rmond 106 }
+
+	rmondLicenseVmUsage OBJECT-TYPE
+		SYNTAX INTEGER
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VM usage from the host license"
+		::= { rmond 107 }
 
 	rmondSinkTable OBJECT-TYPE	
 		SYNTAX SEQUENCE OF RmondSinkEntryType
