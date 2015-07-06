@@ -4,10 +4,10 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/shared_array.hpp>
+#include <prlsdk/PrlPerfCounters.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <parallels-virtualization-sdk/PrlPerfCounters.h>
 
 namespace
 {
@@ -1433,11 +1433,11 @@ bool Unit::inject(space_type& dst_)
 	if (v->attach(new handler_type(v)))
 		return true;
 
-	diskHandler_type::tableSP_type d(new diskHandler_type::tableSP_type::value_type);
+	diskHandler_type::tableSP_type d(new diskHandler_type::tableSP_type::element_type());
 	if (d->attach(new diskHandler_type(d)))
 		return true;
 
-	networkHandler_type::tableSP_type n(new networkHandler_type::tableSP_type::value_type);
+	networkHandler_type::tableSP_type n(new networkHandler_type::tableSP_type::element_type());
 	if (n->attach(new networkHandler_type(n)))
 		return true;
 

@@ -2,10 +2,10 @@
 #define MIB__H
 #include <vector>
 #include "scheduler.h"
+#include <prlsdk/Parallels.h>
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>
-#include <prlsdk/Parallels.h>
 
 typedef std::vector<oid> Oid_type;
 
