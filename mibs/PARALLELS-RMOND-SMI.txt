@@ -632,6 +632,47 @@ rmond	MODULE-IDENTITY
 
 		::= { rmondVeNetworkTableEntry 6 }
 
+	rmondVeVCpuTable OBJECT-TYPE
+		SYNTAX SEQUENCE OF RmondVeVCpuTableEntryType
+		MAX-ACCESS not-accessible
+		STATUS current
+		DESCRIPTION
+			"Table of virtual CPUs of local VEs"
+		::= { rmond 58 }
+
+	rmondVeVCpuTableEntry OBJECT-TYPE
+		SYNTAX RmondVeVCpuTableEntryType
+		MAX-ACCESS not-accessible
+		STATUS current
+		DESCRIPTION
+			"The VE virtual CPU parameters"
+
+		INDEX { rmondVeId, rmondVeVCpuOrdinal }
+		::= { rmondVeVCpuTable 1 }
+
+	RmondVeVCpuTableEntryType ::= SEQUENCE {
+		rmondVeVCpuOrdinal INTEGER,
+		rmondVeVCpuTime Counter64
+	}
+
+	rmondVeVCpuOrdinal OBJECT-TYPE
+		SYNTAX INTEGER
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VE virtual CPU ordinal"
+
+		::= { rmondVeVCpuTableEntry 1 }
+
+	rmondVeVCpuTime OBJECT-TYPE
+		SYNTAX Counter64
+		MAX-ACCESS read-only
+		STATUS current
+		DESCRIPTION
+			"The VE virtual CPU execution time in nanoseconds"
+
+		::= { rmondVeVCpuTableEntry 2 }
+
 	rmondTrap NOTIFICATION-TYPE
 		STATUS  current
 		DESCRIPTION

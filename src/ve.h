@@ -57,6 +57,16 @@ enum TABLE
 };
 
 } // namespace Network
+
+namespace CPU
+{
+enum TABLE
+{
+	ORDINAL = 1,
+	TIME
+};
+
+} // namespace CPU
 } // namespace VE
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,6 +150,25 @@ struct Schema<VE::Network::TABLE>: mpl::vector<
 	static netsnmp_handler_registration* handler(Netsnmp_Node_Handler* handler_, void* my_);
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// struct Schema<VE::CPU::TABLE>
+
+template<>
+struct Schema<VE::CPU::TABLE>: mpl::vector<
+			Declaration<VE::CPU::TABLE, VE::CPU::ORDINAL, ASN_INTEGER>,
+			Declaration<VE::CPU::TABLE, VE::CPU::TIME, ASN_COUNTER64> >
+
+{
+	typedef mpl::vector<
+			mpl::integral_c<VE::TABLE, VE::VEID>,
+			mpl::integral_c<VE::CPU::TABLE, VE::CPU::ORDINAL>
+		> index_type;
+
+	static Oid_type uuid();
+	static const char* name();
+	static netsnmp_handler_registration* handler(Netsnmp_Node_Handler* handler_, void* my_);
+};
+
 namespace VE
 {
 typedef Table::Unit<TABLE> table_type;
@@ -149,7 +178,8 @@ typedef table_type::tupleSP_type tupleSP_type;
 typedef boost::weak_ptr<table_type::tuple_type> tupleWP_type;
 typedef boost::tuple<tableSP_type,
 		boost::shared_ptr<Table::Unit<Disk::TABLE> >,
-		boost::shared_ptr<Table::Unit<Network::TABLE> > > space_type;
+		boost::shared_ptr<Table::Unit<Network::TABLE> >,
+		boost::shared_ptr<Table::Unit<CPU::TABLE> > > space_type;
 
 struct State;
 ///////////////////////////////////////////////////////////////////////////////

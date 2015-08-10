@@ -114,6 +114,25 @@ netsnmp_handler_registration*
 	return Schema<void>::table<VE::Network::TABLE>(handler_, my_, HANDLER_CAN_RONLY);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// struct Schema<VE::CPU::TABLE>
+
+Oid_type Schema<VE::CPU::TABLE>::uuid()
+{
+	return Schema<void>::uuid(58);
+}
+
+const char* Schema<VE::CPU::TABLE>::name()
+{
+	return TOKEN_PREFIX"vcpus";
+}
+
+netsnmp_handler_registration*
+	Schema<VE::CPU::TABLE>::handler(Netsnmp_Node_Handler* handler_, void* my_)
+{
+	return Schema<void>::table<VE::CPU::TABLE>(handler_, my_, HANDLER_CAN_RONLY);
+}
+
 namespace VE
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -321,6 +340,78 @@ void Provenance::refresh(PRL_HANDLE h_)
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// struct Perspective
+
+template<class T>
+struct Perspective
+{
+	typedef Table::Unit<T> table_type;
+
+	Perspective(tupleSP_type parent_, boost::weak_ptr<table_type> table_);
+
+	Value::Composite::Base* value() const
+	{
+		return new Value::Composite::Range<T>(m_parent, m_table);
+	}
+	template<class F>
+	void merge(F flavor_, PRL_HANDLE update_);
+	template<class F>
+	typename table_type::tupleSP_type tuple(F flavor_);
+private:
+	Oid_type m_parent;
+	boost::weak_ptr<table_type> m_table;
+	typename table_type::key_type m_uuid;
+};
+
+template<class T>
+Perspective<T>::Perspective(tupleSP_type parent_, boost::weak_ptr<table_type> table_):
+	m_table(table_)
+{
+	const netsnmp_index& k = parent_->key();
+	m_parent.assign(k.oids, k.oids + k.len);
+	m_uuid.template put<VE::TABLE, VE::VEID>(parent_->get<VE::VEID>());
+}
+
+template<class T>
+template<class F>
+typename Perspective<T>::table_type::tupleSP_type Perspective<T>::tuple(F flavor_)
+{
+	boost::shared_ptr<table_type> z = m_table.lock();
+	if (NULL == z.get())
+		return typename table_type::tupleSP_type();
+
+	typename table_type::key_type k = flavor_.key(m_uuid);
+	typename table_type::tupleSP_type output = z->find(k);
+	if (NULL == output.get())
+	{
+		output = flavor_.tuple(m_uuid);
+		if (z->insert(output))
+			output.reset();
+	}
+	return output;
+}
+
+template<class T>
+template<class F>
+void Perspective<T>::merge(F flavor_, PRL_HANDLE update_)
+{
+	boost::shared_ptr<table_type> z = m_table.lock();
+	if (NULL == z.get())
+		return;
+
+	flavor_.fill(m_uuid, update_);
+	BOOST_FOREACH(typename table_type::tupleSP_type d, z->range(m_parent))
+	{
+		if (flavor_.apply(*d))
+			z->erase(*d);
+	}
+	BOOST_FOREACH(typename table_type::tupleSP_type r, flavor_.rest())
+	{
+		z->insert(r);
+	}
+}
+
 namespace Memory
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -475,18 +566,162 @@ void Units::refresh(PRL_HANDLE h_)
 		x->put<CPU_UNITS>(n);
 }
 
+namespace Virtual
+{
+typedef Table::Unit<TABLE> table_type;
+typedef boost::weak_ptr<table_type> tableWP_type;
+typedef boost::shared_ptr<table_type> tableSP_type;
+typedef table_type::tupleSP_type tupleSP_type;
+typedef boost::weak_ptr<table_type::tuple_type> tupleWP_type;
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Flavor
+
+struct Flavor
+{
+	explicit Flavor(unsigned ordinal_): m_ordinal(ordinal_)
+	{
+	}
+
+	tupleSP_type tuple(const table_type::key_type& uuid_) const;
+	table_type::key_type key(const table_type::key_type& uuid_) const;
+
+private:
+	unsigned m_ordinal;
+};
+
+tupleSP_type Flavor::tuple(const table_type::key_type& uuid_) const
+{
+	return tupleSP_type(new table_type::tuple_type(key(uuid_)));
+}
+
+table_type::key_type Flavor::key(const table_type::key_type& uuid_) const
+{
+	table_type::key_type output = uuid_;
+	output.put<ORDINAL>(m_ordinal);
+	return output;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Update
+
+struct Update
+{
+	explicit Update(VE::tupleSP_type ve_): m_ve(ve_)
+	{
+	}
+
+	std::list<tupleSP_type> rest();
+	bool apply(table_type::tuple_type& dst_);
+	void fill(const table_type::key_type& uuid_, PRL_HANDLE h_);
+private:
+	typedef std::map<unsigned, tupleSP_type> map_type;
+
+	map_type m_map;
+	VE::tupleWP_type m_ve;
+};
+
+std::list<tupleSP_type> Update::rest()
+{
+	std::list<tupleSP_type> output;
+	if (!m_map.empty())
+	{
+		std::transform(m_map.begin(), m_map.end(), std::back_inserter(output),
+			boost::bind(&map_type::value_type::second, _1));
+		m_map.clear();
+	}
+	return output;
+}
+
+bool Update::apply(table_type::tuple_type& to_)
+{
+	map_type::iterator p = m_map.find(to_.get<ORDINAL>());
+	if (m_map.end() == p)
+		return true;
+
+	VE::tupleSP_type x = m_ve.lock();
+	if (NULL != x.get() && x->get<STATE>() != VMS_RUNNING)
+		to_.put<TIME>(0);
+
+	m_map.erase(p);
+	return false;
+}
+
+void Update::fill(const table_type::key_type& uuid_, PRL_HANDLE )
+{
+	unsigned n = 0;
+	VE::tupleSP_type x = m_ve.lock();
+	if (NULL != x.get())
+	{
+		n = x->get<CPU_NUMBER>();
+		if (PRL_CPU_UNLIMITED == n)
+			return;
+
+		m_map.clear();
+	}
+	for (unsigned i = 0; i < n; ++i)
+	{
+		m_map[i] = Flavor(i).tuple(uuid_);
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Event
+
+struct Event: Value::Storage
+{
+	explicit Event(const Perspective<TABLE>& system_): m_system(system_)
+	{
+	}
+
+	void refresh(PRL_HANDLE h_);
+
+private:
+	Perspective<TABLE> m_system;
+};
+
+void Event::refresh(PRL_HANDLE h_)
+{
+	std::string n = Sdk::getString(boost::bind(&PrlEvtPrm_GetName, h_, _1, _2));
+	if (n.empty())
+		return;
+
+	static const char m[] = "guest.vcpu";
+	if (!boost::starts_with(n, m))
+		return;
+
+	PRL_UINT32 i = strtoul(&n[sizeof(m) - 1], NULL, 10);
+	if ((std::numeric_limits<PRL_UINT32>::max)() == i)
+		return;
+
+	table_type::tupleSP_type t = m_system.tuple(Flavor(i));
+	if (NULL == t.get())
+		return;
+
+	PRL_UINT64 u;
+	PRL_RESULT r = PrlEvtPrm_ToUint64(h_, &u);
+	if (PRL_FAILED(r))
+		return;
+	if (boost::ends_with(n, ".time"))
+		t->put<TIME>(u);
+}
+
+} // namespace Virtual
+
 ///////////////////////////////////////////////////////////////////////////////
 // struct Usage
 
 struct Usage: Value::Storage
 {
-	explicit Usage(tupleSP_type data_): m_data(data_)
+	Usage(tupleSP_type data_, const Perspective<TABLE>& system_):
+		m_data(data_), m_system(system_)
 	{
 	}
 
 	void refresh(PRL_HANDLE h_);
 private:
 	tupleWP_type m_data;
+	Perspective<TABLE> m_system;
 };
 
 void Usage::refresh(PRL_HANDLE h_)
@@ -511,83 +746,13 @@ void Usage::refresh(PRL_HANDLE h_)
 		r = PrlStatCpu_GetUserTime(h, &y);
 		if (PRL_SUCCEEDED(r))
 			x->put<CPU_USER>(y);
+
+		m_system.merge(Virtual::Update(x), h_);
 	}
 	PrlHandle_Free(h);
 }
 
 } // namespace CPU
-
-///////////////////////////////////////////////////////////////////////////////
-// struct Perspective
-
-template<class T>
-struct Perspective
-{
-	typedef Table::Unit<T> table_type;
-
-	Perspective(tupleSP_type parent_, boost::weak_ptr<table_type> table_);
-
-	Value::Composite::Base* value() const
-	{
-		return new Value::Composite::Range<T>(m_parent, m_table);
-	}
-	template<class F>
-	void merge(F flavor_, PRL_HANDLE update_);
-	template<class F>
-	typename table_type::tupleSP_type tuple(F flavor_);
-private:
-	Oid_type m_parent;
-	boost::weak_ptr<table_type> m_table;
-	typename table_type::key_type m_uuid;
-};
-
-template<class T>
-Perspective<T>::Perspective(tupleSP_type parent_, boost::weak_ptr<table_type> table_):
-	m_table(table_)
-{
-	const netsnmp_index& k = parent_->key();
-	m_parent.assign(k.oids, k.oids + k.len);
-	m_uuid.template put<VE::TABLE, VE::VEID>(parent_->get<VE::VEID>());
-}
-
-template<class T>
-template<class F>
-typename Perspective<T>::table_type::tupleSP_type Perspective<T>::tuple(F flavor_)
-{
-	boost::shared_ptr<table_type> z = m_table.lock();
-	if (NULL == z.get())
-		return typename table_type::tupleSP_type();
-
-	typename table_type::key_type k = flavor_.key(m_uuid);
-	typename table_type::tupleSP_type output = z->find(k);
-	if (NULL == output.get())
-	{
-		output = flavor_.tuple(m_uuid);
-		if (z->insert(output))
-			output.reset();
-	}
-	return output;
-}
-
-template<class T>
-template<class F>
-void Perspective<T>::merge(F flavor_, PRL_HANDLE update_)
-{
-	boost::shared_ptr<table_type> z = m_table.lock();
-	if (NULL == z.get())
-		return;
-
-	flavor_.fill(m_uuid, update_);
-	BOOST_FOREACH(typename table_type::tupleSP_type d, z->range(m_parent))
-	{
-		if (flavor_.apply(*d))
-			z->erase(*d);
-	}
-	BOOST_FOREACH(typename table_type::tupleSP_type r, flavor_.rest())
-	{
-		z->insert(r);
-	}
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // struct Devices
@@ -1349,6 +1514,7 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		m_tuple.reset();
 	else
 	{
+		Perspective<CPU::TABLE> c(m_tuple, space_.get<3>());
 		Perspective<Disk::TABLE> d(m_tuple, space_.get<1>());
 		Perspective<Network::TABLE> n(m_tuple, space_.get<2>());
 		// state
@@ -1367,10 +1533,13 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		addQueryUsage(new Disk::Space(d));
 		addQueryUsage(new Network::Traffic::Query(ve_, n));
 		addEventUsage(new Network::Traffic::Event(ve_, n));
+		addQueryUsage(new CPU::Usage(m_tuple, c));
+		addEventUsage(new CPU::Virtual::Event(c));
 		// report
 		const netsnmp_index& k = m_tuple->key();
 		addValue(new Value::Composite::Range<TABLE>(
 				Oid_type(k.oids, k.oids + k.len), m_table));
+		addValue(c.value());
 		addValue(d.value());
 		addValue(n.value());
 	}
@@ -1426,11 +1595,16 @@ void Unit::state(PRL_HANDLE event_)
 bool Unit::inject(space_type& dst_)
 {
 	typedef Table::Handler::ReadOnly<TABLE> handler_type;
+	typedef Table::Handler::ReadOnly<CPU::TABLE> vcpuHandler_type;
 	typedef Table::Handler::ReadOnly<Disk::TABLE> diskHandler_type;
 	typedef Table::Handler::ReadOnly<Network::TABLE> networkHandler_type;
 
 	tableSP_type v(new table_type);
 	if (v->attach(new handler_type(v)))
+		return true;
+
+	vcpuHandler_type::tableSP_type c(new vcpuHandler_type::tableSP_type::element_type());
+	if (c->attach(new vcpuHandler_type(c)))
 		return true;
 
 	diskHandler_type::tableSP_type d(new diskHandler_type::tableSP_type::element_type());
@@ -1444,6 +1618,7 @@ bool Unit::inject(space_type& dst_)
 	dst_.get<0>() = v;
 	dst_.get<1>() = d;
 	dst_.get<2>() = n;
+	dst_.get<3>() = c;
 	return false;
 }
 
