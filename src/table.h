@@ -260,7 +260,7 @@ Unit<T>::Unit(): m_storage(NULL), m_registration(NULL)
 {
 	std::string n = std::string(TOKEN_PREFIX)
 				.append(schema_type::name())
-				.append(":").append("table_container");
+				.append(":").append("threadsafe_array");
 	m_storage = netsnmp_container_find(n.c_str());
 	if (NULL == m_storage)
 	{

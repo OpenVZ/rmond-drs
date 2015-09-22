@@ -2,6 +2,7 @@
 #include "sink.h"
 #include <limits>
 #include "system.h"
+#include "container.h"
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 
@@ -405,6 +406,7 @@ bool Central::init()
 						"already been initialized\n");
 				return false;
 			}
+			ThreadsafeContainer::inject();
 			ServerSP s = Server::inject();
 			if (NULL == s.get())
 				break;

@@ -1,4 +1,4 @@
-OBJS=scheduler.lo value.lo asn.lo environment.lo ve.lo details.lo host.lo mib.lo sink.lo rmond.lo system.lo
+OBJS=scheduler.lo value.lo asn.lo environment.lo ve.lo details.lo host.lo container.lo mib.lo sink.lo rmond.lo system.lo
 TARGET=rmond.so
 
 #CFLAGS=$(shell net-snmp-config --cflags) -fPIC -Wall -Werror
