@@ -1,3 +1,11 @@
+ARCH=$(shell uname -i)
+ifeq "${ARCH}" "x86_64"
+LIBDIR ?= /usr/lib64
+else
+LIBDIR ?= /usr/lib
+endif
+DATADIR ?= /usr/share
+
 OBJS=scheduler.lo value.lo asn.lo environment.lo ve.lo details.lo host.lo container.lo mib.lo sink.lo rmond.lo system.lo
 TARGET=rmond.so
 
@@ -16,6 +24,12 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CXX) -o $(TARGET) $(LDFLAGS) $(OBJS) $(BUILDAGENTLIBS) $(SWALIBS)
+
+install: $(TARGET)
+	mkdir -p $(DESTDIR)$(DATADIR)/snmp/mibs
+	mkdir -p $(DESTDIR)$(LIBDIR)/rmond
+	install -m 644 ../mibs/*.txt $(DESTDIR)$(DATADIR)/snmp/mibs/
+	install -m 744 $(TARGET) $(DESTDIR)$(LIBDIR)/rmond/$(TARGET)
 
 clean-depend:
 	rm -f $(OBJS:.lo=.dep)

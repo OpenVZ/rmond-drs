@@ -9,6 +9,9 @@ endef
 all:
 	$(call subdirs_call, $@)
 
+install:
+	$(call subdirs_call, $@)
+
 clean:
 	$(call subdirs_call, $@)
 
