@@ -20,7 +20,10 @@ win_drs-transport.o: transport.c transport.h
 drs-transport.exe: win_drs-transport.o win_transport.o
 	i686-w64-mingw32-gcc -o drs-transport.exe win_drs-transport.o win_transport.o
 
+install: all
+	./install_transport.py
+
 clean:
 	rm -f *.o *.exe drs-transport
 
-.PHONY: all clean
+.PHONY: all clean install
