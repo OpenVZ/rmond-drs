@@ -6,8 +6,8 @@ LIBDIR ?= /usr/lib
 endif
 DATADIR ?= /usr/share
 
-OBJS=scheduler.lo value.lo asn.lo environment.lo ve.lo details.lo host.lo container.lo mib.lo sink.lo rmond.lo system.lo
-TARGET=rmond.so
+OBJS=scheduler.lo value.lo asn.lo environment.lo ve.lo details.lo host.lo container.lo mib.lo sink.lo rmond-drs.lo system.lo
+TARGET=rmond-drs.so
 
 #CFLAGS=$(shell net-snmp-config --cflags) -fPIC -Wall -Werror
 CFLAGS=-DNETSNMP_ENABLE_IPV6 -O0 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=0 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic -D_RPM_4_4_COMPAT -Ulinux -Dlinux=linux -I/usr/include/rpm -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -pipe -fstack-protector -I/usr/local/include -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -I/usr/lib64/perl5/CORE -I. -I/usr/include -fPIC -Wall -Werror
@@ -27,9 +27,9 @@ $(TARGET): $(OBJS)
 
 install: $(TARGET)
 	mkdir -p $(DESTDIR)$(DATADIR)/snmp/mibs
-	mkdir -p $(DESTDIR)$(LIBDIR)/rmond
+	mkdir -p $(DESTDIR)$(LIBDIR)/rmond-drs
 	install -m 644 ../mibs/*.txt $(DESTDIR)$(DATADIR)/snmp/mibs/
-	install -m 744 $(TARGET) $(DESTDIR)$(LIBDIR)/rmond/$(TARGET)
+	install -m 744 $(TARGET) $(DESTDIR)$(LIBDIR)/rmond-drs/$(TARGET)
 
 clean-depend:
 	rm -f $(OBJS:.lo=.dep)

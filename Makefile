@@ -1,4 +1,4 @@
-TARGET=rmond
+TARGET=rmond-drs
 SOURCES=$(PWD)/src
 SUBDIRS=$(SOURCES)
 define subdirs_call

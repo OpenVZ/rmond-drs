@@ -52,7 +52,7 @@ IMPORTS
 	parallelsProducts, parallelsTraps
 		FROM PARALLELS-SMI;
 
-rmond	MODULE-IDENTITY
+rmond_drs	MODULE-IDENTITY
 	LAST-UPDATED "201304260000Z"
 	ORGANIZATION "Parallels, Inc."
 	CONTACT-INFO "Alexander Tormasov
@@ -65,243 +65,243 @@ rmond	MODULE-IDENTITY
 		"Initial version"
 	::= { parallelsProducts 1 }
 
-	rmondLocalVeNumber OBJECT-TYPE
+	rmond_drsLocalVeNumber OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The number of VEs at the host"
-		::= { rmond 101 }
+		::= { rmond_drs 101 }
 
-	rmondVeLimit OBJECT-TYPE
+	rmond_drsVeLimit OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The user configured VE limit"
-		::= { rmond 102 }
+		::= { rmond_drs 102 }
 
-	rmondLicenseVeNumber OBJECT-TYPE
+	rmond_drsLicenseVeNumber OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE limit from the host license"
-		::= { rmond 103 }
+		::= { rmond_drs 103 }
 
-	rmondLicenseCtNumber OBJECT-TYPE
+	rmond_drsLicenseCtNumber OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CT limit from the host license"
-		::= { rmond 104 }
+		::= { rmond_drs 104 }
 
-	rmondLicenseVmNumber OBJECT-TYPE
+	rmond_drsLicenseVmNumber OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VM limit from the host license"
-		::= { rmond 105 }
+		::= { rmond_drs 105 }
 
-	rmondLicenseCtUsage OBJECT-TYPE
+	rmond_drsLicenseCtUsage OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CT usage from the host license"
-		::= { rmond 106 }
+		::= { rmond_drs 106 }
 
-	rmondLicenseVmUsage OBJECT-TYPE
+	rmond_drsLicenseVmUsage OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VM usage from the host license"
-		::= { rmond 107 }
+		::= { rmond_drs 107 }
 
-	rmondSinkTable OBJECT-TYPE	
+	rmond_drsSinkTable OBJECT-TYPE	
 		SYNTAX SEQUENCE OF RmondSinkEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of trap subscribers"
-		::= { rmond 51 }
+		::= { rmond_drs 51 }
 
-	rmondSinkEntry OBJECT-TYPE
+	rmond_drsSinkEntry OBJECT-TYPE
 		SYNTAX RmondSinkEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The trap subscriber parameters"
 
-		INDEX { rmondSinkHost, rmondSinkPort }
-		::= { rmondSinkTable 1 }
+		INDEX { rmond_drsSinkHost, rmond_drsSinkPort }
+		::= { rmond_drsSinkTable 1 }
 
 	RmondSinkEntryType ::= SEQUENCE {
-		rmondSinkHost DisplayString,
-		rmondSinkPort Unsigned32,
-		rmondSinkPeriod Unsigned32,
-		rmondSinkLimit Unsigned32,
-		rmondSinkAcks Unsigned32,
-		rmondSinkStatus RowStatus,
-		rmondSinkTicket DisplayString
+		rmond_drsSinkHost DisplayString,
+		rmond_drsSinkPort Unsigned32,
+		rmond_drsSinkPeriod Unsigned32,
+		rmond_drsSinkLimit Unsigned32,
+		rmond_drsSinkAcks Unsigned32,
+		rmond_drsSinkStatus RowStatus,
+		rmond_drsSinkTicket DisplayString
 	}
 
-	rmondSinkHost OBJECT-TYPE
+	rmond_drsSinkHost OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..128))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The network address of the subscriber"
-		::= { rmondSinkEntry 1 }
+		::= { rmond_drsSinkEntry 1 }
 
 
-	rmondSinkPort OBJECT-TYPE
+	rmond_drsSinkPort OBJECT-TYPE
 		SYNTAX Unsigned32
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The network port of the subscriber"
-		::= { rmondSinkEntry 2 }
+		::= { rmond_drsSinkEntry 2 }
 
-	rmondSinkPeriod OBJECT-TYPE
+	rmond_drsSinkPeriod OBJECT-TYPE
 		SYNTAX Unsigned32
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"The time interval between reports"
-		::= { rmondSinkEntry 3 }
+		::= { rmond_drsSinkEntry 3 }
 
-	rmondSinkLimit OBJECT-TYPE
+	rmond_drsSinkLimit OBJECT-TYPE
 		SYNTAX Unsigned32
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"The number of entries in a single notification"
-		::= { rmondSinkEntry 4 }
+		::= { rmond_drsSinkEntry 4 }
 
-	rmondSinkAcks OBJECT-TYPE
+	rmond_drsSinkAcks OBJECT-TYPE
 		SYNTAX Unsigned32
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"Total reports"
-		::= { rmondSinkEntry 5 }
+		::= { rmond_drsSinkEntry 5 }
 
-	rmondSinkStatus OBJECT-TYPE
+	rmond_drsSinkStatus OBJECT-TYPE
 		SYNTAX RowStatus
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"The status of this conceptual row"
-		::= { rmondSinkEntry 6 }
+		::= { rmond_drsSinkEntry 6 }
 
-	rmondSinkTicket OBJECT-TYPE
+	rmond_drsSinkTicket OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..128))
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"The opaque user data"
-		::= { rmondSinkEntry 7 }
+		::= { rmond_drsSinkEntry 7 }
 
-	rmondMetricTable OBJECT-TYPE	
+	rmond_drsMetricTable OBJECT-TYPE	
 		SYNTAX SEQUENCE OF RmondMetricEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of metric filters by trap subscribers"
-		::= { rmond 52 }
+		::= { rmond_drs 52 }
 
-	rmondMetricEntry OBJECT-TYPE
+	rmond_drsMetricEntry OBJECT-TYPE
 		SYNTAX RmondMetricEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The metric parameters"
 
-		INDEX { rmondSinkHost, rmondSinkPort, rmondMetric }
-		::= { rmondMetricTable 1 }
+		INDEX { rmond_drsSinkHost, rmond_drsSinkPort, rmond_drsMetric }
+		::= { rmond_drsMetricTable 1 }
 
 	RmondMetricEntryType ::= SEQUENCE {
-		rmondMetric OBJECT IDENTIFIER,
-		rmondMetricStatus RowStatus
+		rmond_drsMetric OBJECT IDENTIFIER,
+		rmond_drsMetricStatus RowStatus
 	}
 
-	rmondMetric OBJECT-TYPE
+	rmond_drsMetric OBJECT-TYPE
 		SYNTAX OBJECT IDENTIFIER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The metric name"
-		::= { rmondMetricEntry 1 }
+		::= { rmond_drsMetricEntry 1 }
 
-	rmondMetricStatus OBJECT-TYPE
+	rmond_drsMetricStatus OBJECT-TYPE
 		SYNTAX RowStatus
 		MAX-ACCESS read-create
 		STATUS current
 		DESCRIPTION
 			"The status of this conceptual row"
-		::= { rmondMetricEntry 2 }
+		::= { rmond_drsMetricEntry 2 }
 
 
-	rmondVeTable OBJECT-TYPE
+	rmond_drsVeTable OBJECT-TYPE
 		SYNTAX SEQUENCE OF RmondVeTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of local VEs"
-		::= { rmond 55 }
+		::= { rmond_drs 55 }
 
-	rmondVeTableEntry OBJECT-TYPE
+	rmond_drsVeTableEntry OBJECT-TYPE
 		SYNTAX RmondVeTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The VE parameters"
 
-		INDEX { rmondVeId }
-		::= { rmondVeTable 1 }
+		INDEX { rmond_drsVeId }
+		::= { rmond_drsVeTable 1 }
 
 	RmondVeTableEntryType ::= SEQUENCE {
-		rmondVeId DisplayString,
-		rmondVeType INTEGER,
-		rmondVeName DisplayString,
-		rmondVeState INTEGER,
-		rmondVePerfectNode DisplayString,
-		rmondVeMemoryTotal Counter64,
-		rmondVeMemoryUsage Counter64,
-		rmondVeSwapTotal Counter64,
-		rmondVeSwapUsage Counter64,
-		rmondVeCpuNumber INTEGER,
-		rmondVeCpuLimit INTEGER,
-		rmondVeCpuUnits INTEGER,
-		rmondVeCpuSystem INTEGER,
-		rmondVeCpuUser INTEGER,
-		rmondVeType INTEGER,
-		rmondVeUuid DisplayString
+		rmond_drsVeId DisplayString,
+		rmond_drsVeType INTEGER,
+		rmond_drsVeName DisplayString,
+		rmond_drsVeState INTEGER,
+		rmond_drsVePerfectNode DisplayString,
+		rmond_drsVeMemoryTotal Counter64,
+		rmond_drsVeMemoryUsage Counter64,
+		rmond_drsVeSwapTotal Counter64,
+		rmond_drsVeSwapUsage Counter64,
+		rmond_drsVeCpuNumber INTEGER,
+		rmond_drsVeCpuLimit INTEGER,
+		rmond_drsVeCpuUnits INTEGER,
+		rmond_drsVeCpuSystem INTEGER,
+		rmond_drsVeCpuUser INTEGER,
+		rmond_drsVeType INTEGER,
+		rmond_drsVeUuid DisplayString
 	}
 
-	rmondVeId OBJECT-TYPE
+	rmond_drsVeId OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..39))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE id"
 
-		::= { rmondVeTableEntry 1 }
+		::= { rmond_drsVeTableEntry 1 }
 
-	rmondVeName OBJECT-TYPE
+	rmond_drsVeName OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..255))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE name"
 
-		::= { rmondVeTableEntry 2 }
+		::= { rmond_drsVeTableEntry 2 }
 
-	rmondVeState OBJECT-TYPE
+	rmond_drsVeState OBJECT-TYPE
                 SYNTAX INTEGER {unknown(0),
 				stopped(805306369),
 				starting(805306370),
@@ -328,99 +328,99 @@ rmond	MODULE-IDENTITY
 		DESCRIPTION
 			"The VE state"
 
-		::= { rmondVeTableEntry 3 }
+		::= { rmond_drsVeTableEntry 3 }
 
-	rmondVePerfectNode OBJECT-TYPE
+	rmond_drsVePerfectNode OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..255))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The perfect node for the VE"
 
-		::= { rmondVeTableEntry 4 }
+		::= { rmond_drsVeTableEntry 4 }
 
-	rmondVeMemoryTotal OBJECT-TYPE
+	rmond_drsVeMemoryTotal OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The memory total for the VE"
 
-		::= { rmondVeTableEntry 5 }
+		::= { rmond_drsVeTableEntry 5 }
 
-	rmondVeMemoryUsage OBJECT-TYPE
+	rmond_drsVeMemoryUsage OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The memory usage for the VE"
 
-		::= { rmondVeTableEntry 6 }
+		::= { rmond_drsVeTableEntry 6 }
 
-	rmondVeSwapTotal OBJECT-TYPE
+	rmond_drsVeSwapTotal OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The swap total for the VE"
 
-		::= { rmondVeTableEntry 7 }
+		::= { rmond_drsVeTableEntry 7 }
 
-	rmondVeSwapUsage OBJECT-TYPE
+	rmond_drsVeSwapUsage OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The swap usage for the VE"
 
-		::= { rmondVeTableEntry 8 }
+		::= { rmond_drsVeTableEntry 8 }
 
-	rmondVeCpuNumber OBJECT-TYPE
+	rmond_drsVeCpuNumber OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The number of CPU for the VE"
 
-		::= { rmondVeTableEntry 9 }
+		::= { rmond_drsVeTableEntry 9 }
 
-	rmondVeCpuLimit OBJECT-TYPE
+	rmond_drsVeCpuLimit OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CPU limit for the VE"
 
-		::= { rmondVeTableEntry 10 }
+		::= { rmond_drsVeTableEntry 10 }
 
-	rmondVeCpuUnits OBJECT-TYPE
+	rmond_drsVeCpuUnits OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CPU units for the VE"
 
-		::= { rmondVeTableEntry 11 }
+		::= { rmond_drsVeTableEntry 11 }
 
-	rmondVeCpuSystem OBJECT-TYPE
+	rmond_drsVeCpuSystem OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CPU system usage inside the VE"
 
-		::= { rmondVeTableEntry 12 }
+		::= { rmond_drsVeTableEntry 12 }
 
-	rmondVeCpuUser OBJECT-TYPE
+	rmond_drsVeCpuUser OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The CPU user usage inside the VE"
 
-		::= { rmondVeTableEntry 13 }
+		::= { rmond_drsVeTableEntry 13 }
 
-	rmondVeType OBJECT-TYPE
+	rmond_drsVeType OBJECT-TYPE
                 SYNTAX INTEGER {vm(0),
 				ct(1) }
 
@@ -429,254 +429,254 @@ rmond	MODULE-IDENTITY
 		DESCRIPTION
 			"The VE type"
 
-		::= { rmondVeTableEntry 14 }
+		::= { rmond_drsVeTableEntry 14 }
 
-	rmondVeUuid OBJECT-TYPE
+	rmond_drsVeUuid OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..39))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE UUID reported by the dispatcher"
 
-		::= { rmondVeTableEntry 15 }
+		::= { rmond_drsVeTableEntry 15 }
 
-	rmondVeDiskTable OBJECT-TYPE
+	rmond_drsVeDiskTable OBJECT-TYPE
 		SYNTAX SEQUENCE OF RmondVeDiskTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of storages of local VEs"
-		::= { rmond 56 }
+		::= { rmond_drs 56 }
 
-	rmondVeDiskTableEntry OBJECT-TYPE
+	rmond_drsVeDiskTableEntry OBJECT-TYPE
 		SYNTAX RmondVeDiskTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The VE storage parameters"
 
-		INDEX { rmondVeId, rmondVeDiskHash1, rmondVeDiskHash2 }
-		::= { rmondVeDiskTable 1 }
+		INDEX { rmond_drsVeId, rmond_drsVeDiskHash1, rmond_drsVeDiskHash2 }
+		::= { rmond_drsVeDiskTable 1 }
 
 	RmondVeDiskTableEntryType ::= SEQUENCE {
-		rmondVeDiskHash1 Counter32,
-		rmondVeDiskHash2 Counter32,
-		rmondVeDiskName DisplayString,
-		rmondVeDiskTotal Counter64,
-		rmondVeDiskUsage Counter64,
-		rmondVeDiskReadRequests Counter64,
-		rmondVeDiskWriteRequests Counter64,
-		rmondVeDiskReadBytes Counter64,
-		rmondVeDiskWriteBytes Counter64
+		rmond_drsVeDiskHash1 Counter32,
+		rmond_drsVeDiskHash2 Counter32,
+		rmond_drsVeDiskName DisplayString,
+		rmond_drsVeDiskTotal Counter64,
+		rmond_drsVeDiskUsage Counter64,
+		rmond_drsVeDiskReadRequests Counter64,
+		rmond_drsVeDiskWriteRequests Counter64,
+		rmond_drsVeDiskReadBytes Counter64,
+		rmond_drsVeDiskWriteBytes Counter64
 	}
 
-	rmondVeDiskName OBJECT-TYPE
+	rmond_drsVeDiskName OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..255))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage name"
 
-		::= { rmondVeDiskTableEntry 1 }
+		::= { rmond_drsVeDiskTableEntry 1 }
 
-	rmondVeDiskTotal OBJECT-TYPE
+	rmond_drsVeDiskTotal OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage capacity"
 
-		::= { rmondVeDiskTableEntry 2 }
+		::= { rmond_drsVeDiskTableEntry 2 }
 
-	rmondVeDiskUsage OBJECT-TYPE
+	rmond_drsVeDiskUsage OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage used space"
 
-		::= { rmondVeDiskTableEntry 3 }
+		::= { rmond_drsVeDiskTableEntry 3 }
 
-	rmondVeDiskReadRequests OBJECT-TYPE
+	rmond_drsVeDiskReadRequests OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage read requests rate"
 
-		::= { rmondVeDiskTableEntry 4 }
+		::= { rmond_drsVeDiskTableEntry 4 }
 
-	rmondVeDiskWriteRequests OBJECT-TYPE
+	rmond_drsVeDiskWriteRequests OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage write requests rate"
 
-		::= { rmondVeDiskTableEntry 5 }
+		::= { rmond_drsVeDiskTableEntry 5 }
 
-	rmondVeDiskReadBytes OBJECT-TYPE
+	rmond_drsVeDiskReadBytes OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage read rate"
 
-		::= { rmondVeDiskTableEntry 6 }
+		::= { rmond_drsVeDiskTableEntry 6 }
 
-	rmondVeDiskWriteBytes OBJECT-TYPE
+	rmond_drsVeDiskWriteBytes OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE storage write rate"
 
-		::= { rmondVeDiskTableEntry 7 }
+		::= { rmond_drsVeDiskTableEntry 7 }
 
-	rmondVeDiskHash1 OBJECT-TYPE
+	rmond_drsVeDiskHash1 OBJECT-TYPE
 		SYNTAX Counter32
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The low-order 32 bits of the device name hash"
 
-		::= { rmondVeDiskTableEntry 8 }
+		::= { rmond_drsVeDiskTableEntry 8 }
 
-	rmondVeDiskHash2 OBJECT-TYPE
+	rmond_drsVeDiskHash2 OBJECT-TYPE
 		SYNTAX Counter32
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The high-order 32 bits of the device name hash"
 
-		::= { rmondVeDiskTableEntry 9 }
+		::= { rmond_drsVeDiskTableEntry 9 }
 
-	rmondVeNetworkTable OBJECT-TYPE
+	rmond_drsVeNetworkTable OBJECT-TYPE
 		SYNTAX SEQUENCE OF RmondVeNetworkTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of network interfaces of local VEs"
-		::= { rmond 57 }
+		::= { rmond_drs 57 }
 
-	rmondVeNetworkTableEntry OBJECT-TYPE
+	rmond_drsVeNetworkTableEntry OBJECT-TYPE
 		SYNTAX RmondVeNetworkTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The VE network interface parameters"
 
-		INDEX { rmondVeId, rmondVeNetworkInterface }
-		::= { rmondVeNetworkTable 1 }
+		INDEX { rmond_drsVeId, rmond_drsVeNetworkInterface }
+		::= { rmond_drsVeNetworkTable 1 }
 
 	RmondVeNetworkTableEntryType ::= SEQUENCE {
-		rmondVeNetworkInterface DisplayString,
-		rmondVeNetworkInBytes Counter64,
-		rmondVeNetworkOutBytes Counter64,
-		rmondVeNetworkInPackets Counter64,
-		rmondVeNetworkOutPackets Counter64,
-		rmondVeNetworkMacAddress DisplayString
+		rmond_drsVeNetworkInterface DisplayString,
+		rmond_drsVeNetworkInBytes Counter64,
+		rmond_drsVeNetworkOutBytes Counter64,
+		rmond_drsVeNetworkInPackets Counter64,
+		rmond_drsVeNetworkOutPackets Counter64,
+		rmond_drsVeNetworkMacAddress DisplayString
 	}
 
-	rmondVeNetworkInterface OBJECT-TYPE
+	rmond_drsVeNetworkInterface OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..255))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE network interface name"
 
-		::= { rmondVeNetworkTableEntry 1 }
+		::= { rmond_drsVeNetworkTableEntry 1 }
 
-	rmondVeNetworkInBytes OBJECT-TYPE
+	rmond_drsVeNetworkInBytes OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE network interface input rate"
 
-		::= { rmondVeNetworkTableEntry 2 }
+		::= { rmond_drsVeNetworkTableEntry 2 }
 
-	rmondVeNetworkOutBytes OBJECT-TYPE
+	rmond_drsVeNetworkOutBytes OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE network interface output rate"
 
-		::= { rmondVeNetworkTableEntry 3 }
+		::= { rmond_drsVeNetworkTableEntry 3 }
 
-	rmondVeNetworkInPackets OBJECT-TYPE
+	rmond_drsVeNetworkInPackets OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE network interface input packet rate"
 
-		::= { rmondVeNetworkTableEntry 4 }
+		::= { rmond_drsVeNetworkTableEntry 4 }
 
-	rmondVeNetworkOutPackets OBJECT-TYPE
+	rmond_drsVeNetworkOutPackets OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE network interface output packet rate"
 
-		::= { rmondVeNetworkTableEntry 5 }
+		::= { rmond_drsVeNetworkTableEntry 5 }
 
-	rmondVeNetworkMacAddress OBJECT-TYPE
+	rmond_drsVeNetworkMacAddress OBJECT-TYPE
 		SYNTAX DisplayString(SIZE(1..12))
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"A MAC address of the VE network interface"
 
-		::= { rmondVeNetworkTableEntry 6 }
+		::= { rmond_drsVeNetworkTableEntry 6 }
 
-	rmondVeVCpuTable OBJECT-TYPE
+	rmond_drsVeVCpuTable OBJECT-TYPE
 		SYNTAX SEQUENCE OF RmondVeVCpuTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"Table of virtual CPUs of local VEs"
-		::= { rmond 58 }
+		::= { rmond_drs 58 }
 
-	rmondVeVCpuTableEntry OBJECT-TYPE
+	rmond_drsVeVCpuTableEntry OBJECT-TYPE
 		SYNTAX RmondVeVCpuTableEntryType
 		MAX-ACCESS not-accessible
 		STATUS current
 		DESCRIPTION
 			"The VE virtual CPU parameters"
 
-		INDEX { rmondVeId, rmondVeVCpuOrdinal }
-		::= { rmondVeVCpuTable 1 }
+		INDEX { rmond_drsVeId, rmond_drsVeVCpuOrdinal }
+		::= { rmond_drsVeVCpuTable 1 }
 
 	RmondVeVCpuTableEntryType ::= SEQUENCE {
-		rmondVeVCpuOrdinal INTEGER,
-		rmondVeVCpuTime Counter64
+		rmond_drsVeVCpuOrdinal INTEGER,
+		rmond_drsVeVCpuTime Counter64
 	}
 
-	rmondVeVCpuOrdinal OBJECT-TYPE
+	rmond_drsVeVCpuOrdinal OBJECT-TYPE
 		SYNTAX INTEGER
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE virtual CPU ordinal"
 
-		::= { rmondVeVCpuTableEntry 1 }
+		::= { rmond_drsVeVCpuTableEntry 1 }
 
-	rmondVeVCpuTime OBJECT-TYPE
+	rmond_drsVeVCpuTime OBJECT-TYPE
 		SYNTAX Counter64
 		MAX-ACCESS read-only
 		STATUS current
 		DESCRIPTION
 			"The VE virtual CPU execution time in nanoseconds"
 
-		::= { rmondVeVCpuTableEntry 2 }
+		::= { rmond_drsVeVCpuTableEntry 2 }
 
-	rmondTrap NOTIFICATION-TYPE
+	rmond_drsTrap NOTIFICATION-TYPE
 		STATUS  current
 		DESCRIPTION
-			"The rmond periodic notification"
+			"The rmond_drs periodic notification"
 
 		::= { parallelsTraps 51 }
 
