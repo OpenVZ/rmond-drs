@@ -42,7 +42,7 @@ enum
 {
 	REAPER_TIMEOUT = 5,
 	CONNECT_TIMEOUT = 30,
-	COLLECT_TIMEOUT = 20
+	COLLECT_TIMEOUT = 1
 };
 
 ///////////////////////////////////////////////////////////////////////////////
