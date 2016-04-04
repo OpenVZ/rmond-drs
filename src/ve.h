@@ -50,6 +50,27 @@ enum TABLE
 	UUID
 };
 
+namespace Counters
+{
+namespace Linux
+{
+enum TABLE
+{
+	LOADAVG_15 = 1,
+	LOADAVG_CURRENT_EXISTING,
+	DISKSTATS_IOS_IN_PROCESS,
+	DISKSTATS_MS_WRITING,
+	MEMINFO_PAGETABLES,
+	MEMINFO_MAPPED,
+	MEMINFO_DIRTY,
+	MEMINFO_SUNRECLAIM,
+	MEMINFO_WRITEBACK
+};
+
+} // namespace Linux
+
+} // namespace Counters
+
 namespace Disk
 {
 enum TABLE
@@ -113,6 +134,31 @@ struct Schema<VE::TABLE>: mpl::vector<
 			Declaration<VE::TABLE, VE::CPU_UNITS, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::CPU_SYSTEM, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::CPU_USER, ASN_INTEGER> >
+
+{
+	typedef mpl::vector<
+			mpl::integral_c<VE::TABLE, VE::VEID>
+		> index_type;
+
+	static Oid_type uuid();
+	static const char* name();
+	static netsnmp_handler_registration* handler(Netsnmp_Node_Handler* handler_, void* my_);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Schema<VE::Counters::Linux::TABLE>
+
+template<>
+struct Schema<VE::Counters::Linux::TABLE>: mpl::vector<
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::LOADAVG_15, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::LOADAVG_CURRENT_EXISTING, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::DISKSTATS_IOS_IN_PROCESS, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::DISKSTATS_MS_WRITING, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::MEMINFO_PAGETABLES, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::MEMINFO_MAPPED, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::MEMINFO_DIRTY, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::MEMINFO_SUNRECLAIM, ASN_INTEGER>,
+			Declaration<VE::Counters::Linux::TABLE, VE::Counters::Linux::MEMINFO_WRITEBACK, ASN_INTEGER> >
 
 {
 	typedef mpl::vector<
@@ -203,7 +249,8 @@ typedef boost::weak_ptr<table_type::tuple_type> tupleWP_type;
 typedef boost::tuple<tableSP_type,
 		boost::shared_ptr<Table::Unit<Disk::TABLE> >,
 		boost::shared_ptr<Table::Unit<Network::TABLE> >,
-		boost::shared_ptr<Table::Unit<CPU::TABLE> > > space_type;
+		boost::shared_ptr<Table::Unit<CPU::TABLE> >,
+		boost::shared_ptr<Table::Unit<Counters::Linux::TABLE> > > space_type;
 
 struct State;
 ///////////////////////////////////////////////////////////////////////////////

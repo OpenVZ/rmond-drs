@@ -156,6 +156,27 @@ netsnmp_handler_registration*
 	return Schema<void>::table<VE::CPU::TABLE>(handler_, my_, HANDLER_CAN_RONLY);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// struct Schema<VE::Counters::Linux::TABLE>
+
+Oid_type Schema<VE::Counters::Linux::TABLE>::uuid()
+{
+	Oid_type output = Schema<void>::uuid(59);
+	output.push_back(1);
+	return output;
+}
+
+const char* Schema<VE::Counters::Linux::TABLE>::name()
+{
+	return TOKEN_PREFIX"Counters::Linux";
+}
+
+netsnmp_handler_registration*
+	Schema<VE::Counters::Linux::TABLE>::handler(Netsnmp_Node_Handler* handler_, void* my_)
+{
+	return Schema<void>::table<VE::Counters::Linux::TABLE>(handler_, my_, HANDLER_CAN_RONLY);
+}
+
 namespace VE
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -523,6 +544,144 @@ void Event::refresh(PRL_HANDLE h_)
 }
 
 } // namespace Memory
+
+namespace Counters
+{
+
+namespace Linux
+{
+
+namespace Virtual
+{
+typedef Table::Unit<TABLE> table_type;
+typedef boost::weak_ptr<table_type> tableWP_type;
+typedef boost::shared_ptr<table_type> tableSP_type;
+typedef table_type::tupleSP_type tupleSP_type;
+typedef boost::weak_ptr<table_type::tuple_type> tupleWP_type;
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Flavor
+
+struct Flavor
+{
+	explicit Flavor(PRL_HANDLE veHandle_, VE::tupleWP_type ve_):
+		m_veHandle(veHandle_), m_ve(ve_)
+	{
+	}
+
+	tupleSP_type tuple(const table_type::key_type& uuid_) const;
+	tupleSP_type dataFromCT(const tupleSP_type output,
+			const std::string& ctid, const std::string& uuid) const;
+	tupleSP_type dataFromLinVM(const tupleSP_type output,
+			const std::string& uuid) const;
+
+private:
+	PRL_HANDLE m_veHandle;
+	VE::tupleWP_type m_ve;
+};
+
+tupleSP_type Flavor::dataFromCT(const tupleSP_type output,
+		const std::string& ctid, const std::string& uuid) const
+{
+	return output;
+}
+
+tupleSP_type Flavor::dataFromLinVM(const tupleSP_type output,
+		const std::string& uuid) const
+{
+	return output;
+}
+
+tupleSP_type Flavor::tuple(const table_type::key_type& uuid_) const
+{
+	tupleSP_type output(new table_type::tuple_type(uuid_));
+	VE::tupleSP_type x = m_ve.lock();
+
+	if (x->get<TYPE>() == PVT_CT && x->get<STATE>() == VMS_RUNNING)
+		dataFromCT(output, x->get<NAME>(), x->get<UUID>());
+	if (x->get<TYPE>() == PVT_VM && x->get<STATE>() == VMS_RUNNING
+			&& x->get<OS_TYPE>() == PVS_GUEST_TYPE_LINUX)
+		dataFromLinVM(output, x->get<UUID>());
+	return output;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Update
+
+struct Update
+{
+	explicit Update(PRL_HANDLE veHandle_, VE::tupleSP_type ve_):
+		m_ve(ve_), m_veHandle(veHandle_)
+	{
+	}
+
+	std::list<tupleSP_type> rest();
+	bool apply(table_type::tuple_type& dst_);
+	void fill(const table_type::key_type& uuid_, PRL_HANDLE h_);
+private:
+	typedef std::map<unsigned, tupleSP_type> map_type;
+
+	tupleSP_type m_sp;
+	VE::tupleWP_type m_ve;
+	PRL_HANDLE m_veHandle;
+};
+
+std::list<tupleSP_type> Update::rest()
+{
+	std::list<tupleSP_type> output;
+	output.push_front(m_sp);
+	return output;
+}
+
+bool Update::apply(table_type::tuple_type& to_)
+{
+	to_.put<LOADAVG_15>(m_sp->get<LOADAVG_15>());
+	to_.put<LOADAVG_CURRENT_EXISTING>(m_sp->get<LOADAVG_CURRENT_EXISTING>());
+	to_.put<DISKSTATS_IOS_IN_PROCESS>(m_sp->get<DISKSTATS_IOS_IN_PROCESS>());
+	to_.put<DISKSTATS_MS_WRITING>(m_sp->get<DISKSTATS_MS_WRITING>());
+	to_.put<MEMINFO_PAGETABLES>(m_sp->get<MEMINFO_PAGETABLES>());
+	to_.put<MEMINFO_MAPPED>(m_sp->get<MEMINFO_MAPPED>());
+	to_.put<MEMINFO_DIRTY>(m_sp->get<MEMINFO_DIRTY>());
+	to_.put<MEMINFO_SUNRECLAIM>(m_sp->get<MEMINFO_SUNRECLAIM>());
+	to_.put<MEMINFO_WRITEBACK>(m_sp->get<MEMINFO_WRITEBACK>());
+	return false;
+}
+
+void Update::fill(const table_type::key_type& uuid_, PRL_HANDLE )
+{
+	VE::tupleSP_type x = m_ve.lock();
+	if (NULL == x.get())
+		return;
+	m_sp = Flavor(m_veHandle, m_ve).tuple(uuid_);
+}
+
+} // namespace Virtual
+
+///////////////////////////////////////////////////////////////////////////////
+// struct Query
+
+struct Query: Value::Storage
+{
+	Query(PRL_HANDLE ve_, tupleSP_type data_, const Perspective<TABLE>& system_):
+		m_data(data_), m_system(system_), m_ve(ve_)
+	{
+	}
+
+	void refresh(PRL_HANDLE h_)
+	{
+		tupleSP_type x = m_data.lock();
+		if (NULL != x.get())
+			m_system.merge(Virtual::Update(m_ve, x), h_);
+	}
+private:
+	tupleWP_type m_data;
+	Perspective<TABLE> m_system;
+	PRL_HANDLE m_ve;
+};
+
+} // namespace Linux
+
+} // namespace Counters
 
 namespace CPU
 {
@@ -1555,6 +1714,7 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		Perspective<CPU::TABLE> c(m_tuple, space_.get<3>());
 		Perspective<Disk::TABLE> d(m_tuple, space_.get<1>());
 		Perspective<Network::TABLE> n(m_tuple, space_.get<2>());
+		Perspective<Counters::Linux::TABLE> f(m_tuple, space_.get<4>());
 		// state
 		m_state = new State(ve_, m_tuple);
 		addState(m_state);
@@ -1573,6 +1733,7 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		addEventUsage(new Network::Traffic::Event(ve_, n));
 		addQueryUsage(new CPU::Usage(m_tuple, c));
 		addEventUsage(new CPU::Virtual::Event(c));
+		addQueryUsage(new Counters::Linux::Query(ve_, m_tuple, f));
 		// report
 		const netsnmp_index& k = m_tuple->key();
 		addValue(new Value::Composite::Range<TABLE>(
@@ -1580,6 +1741,7 @@ Unit::Unit(PRL_HANDLE ve_, const table_type::key_type& key_, const space_type& s
 		addValue(c.value());
 		addValue(d.value());
 		addValue(n.value());
+		addValue(f.value());
 	}
 }
 
@@ -1636,6 +1798,7 @@ bool Unit::inject(space_type& dst_)
 	typedef Table::Handler::ReadOnly<CPU::TABLE> vcpuHandler_type;
 	typedef Table::Handler::ReadOnly<Disk::TABLE> diskHandler_type;
 	typedef Table::Handler::ReadOnly<Network::TABLE> networkHandler_type;
+	typedef Table::Handler::ReadOnly<Counters::Linux::TABLE> linCounterHandler_type;
 
 	tableSP_type v(new table_type);
 	if (v->attach(new handler_type(v)))
@@ -1653,10 +1816,15 @@ bool Unit::inject(space_type& dst_)
 	if (n->attach(new networkHandler_type(n)))
 		return true;
 
+	linCounterHandler_type::tableSP_type f(new linCounterHandler_type::tableSP_type::element_type());
+	if (f->attach(new linCounterHandler_type(f)))
+		return true;
+
 	dst_.get<0>() = v;
 	dst_.get<1>() = d;
 	dst_.get<2>() = n;
 	dst_.get<3>() = c;
+	dst_.get<4>() = f;
 	return false;
 }
 
