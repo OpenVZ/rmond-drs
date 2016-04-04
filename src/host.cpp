@@ -26,6 +26,8 @@
 #include <boost/function.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/algorithm/string.hpp>
+#include <fstream>
+#include <sstream>
 
 extern netsnmp_session* main_session;
 extern "C"
@@ -306,43 +308,154 @@ void Unit::refresh(PRL_HANDLE h_)
 	if (NULL == z)
 	{
 		snmp_log(LOG_ERR, LOG_PREFIX"cannot start vzlicview\n");
-		return;
-	}
-	std::ostringstream e;
-	PRL_UINT32 a = 0;
-	Counter v, m;
-	while (!feof(z) && e.tellp() < 1024)
-	{
-		char b[128] = {};
-		if (NULL == fgets(b, sizeof(b), z))
-			continue;
-		e << b;
-		char* s = strchr(b, '=');
-		if (NULL == s)
-			continue;
-		s[0] = 0;
-		if (boost::ends_with(b, "ct_total"))
-			v =  Counter::parse(&s[1]);
-		else if (boost::ends_with(b, "nr_vms"))
-			m = Counter::parse(&s[1]);
-		else if (boost::ends_with(b, "servers_total"))
-			a = Counter::parse(&s[1]).getLimit();
-	}
-	int s = pclose(z);
-	if (0 == s)
-	{
-		t->put<LICENSE_CTS>(a ? : v.getLimit());
-		t->put<LICENSE_VMS>(a ? : m.getLimit());
-		t->put<LICENSE_VES>(a ? : std::min<PRL_UINT32>(
-					m.getLimit() + v.getLimit(), Counter::NOLIMIT));
-		t->put<LICENSE_CTS_USAGE>(v.getUsage());
-		t->put<LICENSE_VMS_USAGE>(m.getUsage());
 	}
 	else
+	{ // read vzlicview
+		std::ostringstream e;
+		PRL_UINT32 a = 0;
+		Counter v, m;
+		while (!feof(z) && e.tellp() < 1024)
+		{
+			char b[128] = {};
+			if (NULL == fgets(b, sizeof(b), z))
+				continue;
+			e << b;
+			char* s = strchr(b, '=');
+			if (NULL == s)
+				continue;
+			s[0] = 0;
+			if (boost::ends_with(b, "ct_total"))
+				v =  Counter::parse(&s[1]);
+			else if (boost::ends_with(b, "nr_vms"))
+				m = Counter::parse(&s[1]);
+			else if (boost::ends_with(b, "servers_total"))
+				a = Counter::parse(&s[1]).getLimit();
+		}
+		int s = pclose(z);
+		if (0 == s)
+		{
+			t->put<LICENSE_CTS>(a ? : v.getLimit());
+			t->put<LICENSE_VMS>(a ? : m.getLimit());
+			t->put<LICENSE_VES>(a ? : std::min<PRL_UINT32>(
+						m.getLimit() + v.getLimit(), Counter::NOLIMIT));
+			t->put<LICENSE_CTS_USAGE>(v.getUsage());
+			t->put<LICENSE_VMS_USAGE>(m.getUsage());
+		}
+		else
+		{
+			snmp_log(LOG_ERR, LOG_PREFIX"vzlicview status %d(%d):\n%s\n",
+					WEXITSTATUS(s), s, e.str().c_str());
+		}
+	} // read vzlicview
+
+	std::string line, temp;
+
+	std::ifstream diskstats ("/proc/diskstats");
+	int diskstats_ios_in_process = 0, diskstats_ms_doing_ios = 0;
+	while (getline (diskstats, line))
 	{
-		snmp_log(LOG_ERR, LOG_PREFIX"vzlicview status %d(%d):\n%s\n",
-				WEXITSTATUS(s), s, e.str().c_str());
+		std::istringstream iss(line);
+		for (int i = 0; i < 11; i++)
+			iss >> temp;
+		iss >> temp;
+		diskstats_ios_in_process += atoi(temp.c_str());
+		iss >> temp;
+		diskstats_ms_doing_ios += atoi(temp.c_str());
 	}
+	t->put<DISKSTATS_IOS_IN_PROCESS>(diskstats_ios_in_process);
+	t->put<DISKSTATS_MS_DOING_OIS>(diskstats_ms_doing_ios);
+	diskstats.close();
+
+	std::ifstream interrupts ("/proc/interrupts");
+	int int_res = 0;
+	while (getline (interrupts, line))
+	{
+		std::istringstream iss(line);
+		iss >> temp;
+		if (temp.compare("RES:"))
+			continue;
+		while(iss >> temp)
+			int_res += atoi(temp.c_str());
+		break;
+	}
+	t->put<INT_RES>(int_res);
+	interrupts.close();
+
+	std::ifstream meminfo ("/proc/meminfo");
+	int meminfo_buffers = 0, meminfo_dirty = 0;
+	while (getline (meminfo, line))
+	{
+		std::istringstream iss(line);
+		iss >> temp;
+		if (!temp.compare("Buffers:"))
+			iss >> meminfo_buffers;
+		else if (!temp.compare("Dirty:"))
+			iss >> meminfo_dirty;
+	}
+	t->put<MEMINFO_DIRTY>(meminfo_dirty);
+	t->put<MEMINFO_BUFFERS>(meminfo_buffers);
+	meminfo.close();
+
+	std::ifstream stat ("/proc/stat");
+	enum softirqStatsNames {
+		TOTAL,
+		HI,
+		TIMER,
+		NET_TX,
+		NET_RX,
+		BLOCK,
+		BLOCK_IOPOLL,
+		TASKLET,
+		SCHED,
+		HRTIMER,
+		RCU,
+		_LAST
+	};
+	int stat_intr_46 = 0;
+	int stat_softirq_rcu = 0, stat_softirq_sched = 0, stat_softirq_net_tx = 0;
+	int stat_procs_running = 0, stat_procs_blocked = 0, stat_processes = 0;
+	while (getline (stat, line))
+	{
+		std::istringstream iss(line);
+		iss >> temp;
+		if (!temp.compare("softirq"))
+			for (int i = TOTAL; i < _LAST; i++)
+			{
+				iss >> temp;
+				switch(i)
+				{
+				case RCU:
+					stat_softirq_rcu = atoi(temp.c_str());
+					break;
+				case SCHED:
+					stat_softirq_sched = atoi(temp.c_str());
+					break;
+				case NET_TX:
+					stat_softirq_net_tx = atoi(temp.c_str());
+					break;
+				}
+			}
+		else if (!temp.compare("intr"))
+		{
+			iss >> stat_intr_46;
+			for (int i = 0; i <= 46; i++)
+				iss >> stat_intr_46;
+		}
+		else if (!temp.compare("procs_blocked"))
+			iss >> stat_procs_blocked;
+		else if (!temp.compare("procs_running"))
+			iss >> stat_procs_running;
+		else if (!temp.compare("processes"))
+			iss >> stat_processes;
+	}
+	t->put<STAT_SOFTIRQ_RCU>(stat_softirq_rcu);
+	t->put<STAT_SOFTIRQ_SCHED>(stat_softirq_sched);
+	t->put<STAT_SOFTIRQ_NET_TX>(stat_softirq_net_tx);
+	t->put<STAT_INTR_46>(stat_intr_46);
+	t->put<STAT_PROCS_BLOCKED>(stat_procs_blocked);
+	t->put<STAT_PROCS_RUNNING>(stat_procs_running);
+	t->put<STAT_PROCESSES>(stat_processes);
+	stat.close();
 }
 
 } // namespace License
