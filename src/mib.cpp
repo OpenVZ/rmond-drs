@@ -466,13 +466,13 @@ void Central::fini()
 
 Oid_type Central::traps()
 {
-	static const Oid_type::value_type NAME[] = {SNMP_OID_ENTERPRISES, 26171, 2};
+	static const Oid_type::value_type NAME[] = {SNMP_OID_ENTERPRISES, 26171, 3};
 	return Oid_type(NAME, NAME + sizeof(NAME)/sizeof(NAME[0]));
 }
 
 Oid_type Central::product()
 {
-	static const Oid_type::value_type NAME[] = {SNMP_OID_ENTERPRISES, 26171, 1, 1};
+	static const Oid_type::value_type NAME[] = {SNMP_OID_ENTERPRISES, 26171, 1, 2};
 	return Oid_type(NAME, NAME + sizeof(NAME)/sizeof(NAME[0]));
 }
 
