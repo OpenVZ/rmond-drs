@@ -23,12 +23,15 @@
 #include "ve.h"
 #include "system.h"
 #include "handler.h"
+#include <cstring>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/shared_array.hpp>
+#include <boost/unordered_map.hpp>
 #include <prlsdk/PrlApiVm.h>
 #include <prlsdk/PrlPerfCounters.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/find.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <fstream>
@@ -180,6 +183,182 @@ netsnmp_handler_registration*
 
 namespace VE
 {
+typedef boost::unordered_map<std::string, struct ConnectionToVM*> uuidConnectionMap;
+uuidConnectionMap uuid2Connection;
+
+struct ConnectionToVM {
+private:
+	PRL_HANDLE hLogin;
+	PRL_HANDLE hResult;
+	PRL_HANDLE hVmGuest;
+	PRL_HANDLE hConnect;
+	PRL_HANDLE hArgs;
+	PRL_HANDLE hEnvs;
+	PRL_HANDLE hExecJob;
+	int vmPipe[2];
+	PRL_HANDLE m_veHandle;
+	const static int readSize = 1024;
+	const static int bufferSize = 4*readSize;
+	int readBytes;
+	char buffer[bufferSize];
+	const static int maxFaults = 3;
+	int errors;
+public:
+	ConnectionToVM(const char *cmd, PRL_HANDLE veHandle);
+	~ConnectionToVM();
+	int *getVmPipe() {return vmPipe;};
+	int getErrors() {return errors;};
+	int jobAlive() {return PrlJob_Wait(hExecJob, 0) == PRL_ERR_TIMEOUT;};
+	int lostSignal() {return getErrors() == maxFaults;};
+	char *getLastLine();
+};
+
+ConnectionToVM::ConnectionToVM(const char *cmd, PRL_HANDLE veHandle):
+		hLogin(PRL_INVALID_HANDLE),
+		hResult(PRL_INVALID_HANDLE),
+		hVmGuest(PRL_INVALID_HANDLE),
+		hConnect(PRL_INVALID_HANDLE),
+		hArgs(PRL_INVALID_HANDLE),
+		hEnvs(PRL_INVALID_HANDLE),
+		hExecJob(PRL_INVALID_HANDLE),
+		m_veHandle(veHandle)
+{
+	int ret;
+	PRL_UINT32 nFlags = PFD_STDOUT | PRPM_RUN_PROGRAM_ENTER;
+	vmPipe[0] = vmPipe[1] = -1;
+	errors = 0;
+	readBytes = 0;
+	hLogin = PrlVm_LoginInGuest(m_veHandle, PRL_PRIVILEGED_GUEST_OS_SESSION, 0, 0);
+	if (hLogin == PRL_INVALID_HANDLE)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlVm_LoginInGuest error\n");
+		throw std::exception();
+	}
+	if ((ret = PrlJob_Wait(hLogin, 1000)) != PRL_ERR_SUCCESS) //1sec timeout
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlJob_Wait error %d\n", ret);
+		throw std::exception();
+	}
+	if ((ret = PrlJob_GetResult(hLogin, &hResult)) != PRL_ERR_SUCCESS)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlJob_GetResult error %d\n", ret);
+		throw std::exception();
+	}
+	if ((ret = PrlResult_GetParam(hResult, &hVmGuest)) != PRL_ERR_SUCCESS)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlResult_GetParam error %d\n", ret);
+		throw std::exception();
+	}
+	hConnect = PrlVm_Connect(m_veHandle, PDCT_LOW_QUALITY_WITHOUT_COMPRESSION);
+	if (hConnect == PRL_INVALID_HANDLE)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlVm_Connect error\n");
+		throw std::exception();
+	}
+	if ((ret = PrlJob_Wait(hConnect, 1000)) != PRL_ERR_SUCCESS) //1sec timeout
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlJob_Wait error %d\n", ret);
+		throw std::exception();
+	}
+	if ((ret = PrlApi_CreateStringsList(&hArgs)) != PRL_ERR_SUCCESS)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlApi_CreateStringsList error %d\n", ret);
+		throw std::exception();
+	}
+	if ((ret = PrlApi_CreateStringsList(&hEnvs)) != PRL_ERR_SUCCESS)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlApi_CreateStringsList error %d\n", ret);
+		throw std::exception();
+	}
+
+	if (pipe(vmPipe) != 0)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"pipe error %s\n", strerror(errno));
+		throw std::exception();
+	}
+
+	hExecJob = PrlVmGuest_RunProgram(hVmGuest, cmd, hArgs, hEnvs, nFlags,
+						PRL_INVALID_FILE_DESCRIPTOR,
+						vmPipe[1],
+						PRL_INVALID_FILE_DESCRIPTOR);
+//	close(vmPipe[1]);
+	if (hExecJob == PRL_INVALID_HANDLE)
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlVmGuest_RunProgram error\n");
+		throw std::exception();
+	}
+//	ret = PrlJob_Wait(hExecJob, 1000); //1sec timeout
+/*	if ((ret = PrlJob_Wait(hExecJob, 1000)) != PRL_ERR_SUCCESS) //1sec timeout
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"PrlJob_Wait error %d\n", ret);
+		throw std::exception();
+	}
+*/
+}
+
+ConnectionToVM::~ConnectionToVM()
+{
+	PrlVm_Disconnect(m_veHandle);
+	PrlHandle_Free(PrlVmGuest_Logout(hVmGuest, 0));
+	PrlHandle_Free(hExecJob);
+	if (!vmPipe[0])
+		close(vmPipe[0]);
+	if (!vmPipe[1])
+		close(vmPipe[1]);
+	PrlHandle_Free(hEnvs);
+	PrlHandle_Free(hArgs);
+	PrlHandle_Free(hConnect);
+	PrlHandle_Free(hVmGuest);
+	PrlHandle_Free(hResult);
+	PrlHandle_Free(hLogin);
+}
+
+char *ConnectionToVM::getLastLine()
+{
+	int faults = 0;
+
+	while (faults != maxFaults)
+	{
+		assert(readBytes < bufferSize - readSize);
+		int n = read(vmPipe[0], buffer + readBytes, readSize);
+		if (n == -1)
+		{
+			snmp_log(LOG_ERR, LOG_PREFIX"read error %s\n", strerror(errno));
+			errors++;
+			return NULL;
+		}
+		readBytes += n;
+		buffer[readBytes] = '\0';
+		char *last = strrchr(buffer, '\n');
+		if (!last)
+		{
+			// unlikely case of incomplete string
+incomplete:
+			sleep(0);
+			faults++;
+			continue;
+		}
+		if (last[1] != '\0')
+		{
+			memmove(buffer, last + 1, buffer + readBytes - last - 1);
+			readBytes = buffer + readBytes - last - 1;
+			goto incomplete;
+		}
+
+		*last = '\0';
+		char * before = strrchr(buffer, '\n');
+
+		if (before)
+			memmove(buffer, before + 1, buffer + readBytes - before);
+		errors = 0;
+		readBytes = 0;
+		return buffer;
+	}
+	snmp_log(LOG_ERR, LOG_PREFIX"could not read whole line\n");
+	errors++;
+	return NULL;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // struct Name
 
@@ -642,6 +821,56 @@ tupleSP_type Flavor::dataFromCT(const tupleSP_type output,
 tupleSP_type Flavor::dataFromLinVM(const tupleSP_type output,
 		const std::string& uuid) const
 {
+	struct ConnectionToVM *connection;
+	if (uuid2Connection.find(uuid) == uuid2Connection.end())
+	{
+		connect:
+		try
+		{
+			connection = new ConnectionToVM("/usr/bin/drs-transport", m_veHandle);
+			uuid2Connection[uuid] = connection;
+		}
+		catch(...)
+		{
+			;
+		}
+		return output;
+	}
+	else
+		connection = uuid2Connection.at(uuid);
+	char *b = connection->getLastLine();
+	if (!b && (!connection->jobAlive() || connection->lostSignal()))
+	{
+		snmp_log(LOG_ERR, LOG_PREFIX"reconnecting to %s\n", uuid.c_str());
+		delete uuid2Connection.at(uuid);
+		uuid2Connection.erase(uuid);
+		goto connect;
+	}
+	while (b)
+	{
+		#define READ_TO_PROPERTY(string, property) { \
+			if (boost::starts_with(b, string)) { \
+				char *temp = strchr(b, ':'); \
+				if (temp) \
+					output->put<property>(strtoul(temp + 1, NULL, 10)); \
+			} \
+		}
+		READ_TO_PROPERTY("loadavg_15",LOADAVG_15);
+		READ_TO_PROPERTY("loadavg_currExisting",LOADAVG_CURRENT_EXISTING);
+		READ_TO_PROPERTY("diskstats_ios_in_process",DISKSTATS_IOS_IN_PROCESS);
+		READ_TO_PROPERTY("diskstats_ms_writing",DISKSTATS_MS_WRITING);
+		READ_TO_PROPERTY("meminfo_PageTables",MEMINFO_PAGETABLES);
+		READ_TO_PROPERTY("meminfo_Mapped",MEMINFO_MAPPED);
+		READ_TO_PROPERTY("meminfo_Dirty",MEMINFO_DIRTY);
+		READ_TO_PROPERTY("meminfo_SUnreclaim",MEMINFO_SUNRECLAIM);
+		READ_TO_PROPERTY("meminfo_Writeback",MEMINFO_WRITEBACK);
+		b = strchr(b, ' ');
+		if (b)
+			b += 1;
+		else
+			break;
+		#undef READ_TO_PROPERTY
+	}
 	return output;
 }
 
