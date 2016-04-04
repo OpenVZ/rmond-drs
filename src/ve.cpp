@@ -31,6 +31,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <fstream>
 
 namespace
 {
@@ -583,6 +584,58 @@ private:
 tupleSP_type Flavor::dataFromCT(const tupleSP_type output,
 		const std::string& ctid, const std::string& uuid) const
 {
+	FILE* z = popen(("vzlist -o laverage " + ctid).c_str(), "r");
+	if (NULL == z)
+		snmp_log(LOG_ERR, LOG_PREFIX"cannot start vzlist %s\n", ctid.c_str());
+	else
+	{ // read vzlist
+		std::ostringstream e;
+		while (!feof(z) && e.tellp() < 1024)
+		{
+			char b[128] = {};
+			if (NULL == fgets(b, sizeof(b), z))
+				continue;
+			e << b;
+			char* s = strchr(b, '/');
+			if (!s)
+				continue;
+			s += 1;
+			s = strchr(s, '/');
+			s += 1;
+			output->put<LOADAVG_15>((int)(strtod(s, NULL)*100+0.5));
+		}
+		pclose(z);
+	} // read vzlist
+
+	std::string line, temp, envId;
+	envId = Sdk::getString(boost::bind(&PrlVmCfg_GetCtId, m_veHandle, _1, _2));
+	std::ifstream meminfo (("/proc/bc/" + envId + "/meminfo").c_str());;
+	int meminfo_writeback = 0, meminfo_dirty = 0, meminfo_sunreclaim = 0;
+	while (getline(meminfo, line))
+	{
+		std::istringstream iss(line);
+		iss >> temp;
+		if (!temp.compare("Writeback:"))
+		{
+			iss >> temp;
+			meminfo_writeback = atoi(temp.c_str());
+		}
+		else if (!temp.compare("Dirty:"))
+		{
+			iss >> temp;
+			meminfo_dirty = atoi(temp.c_str());
+		}
+		else if (!temp.compare("SUnreclaim:"))
+		{
+			iss >> temp;
+			meminfo_sunreclaim = atoi(temp.c_str());
+		}
+	}
+	output->put<MEMINFO_DIRTY>(meminfo_dirty);
+	output->put<MEMINFO_WRITEBACK>(meminfo_writeback);
+	output->put<MEMINFO_SUNRECLAIM>(meminfo_sunreclaim);
+	meminfo.close();
+
 	return output;
 }
 
