@@ -46,6 +46,7 @@ enum TABLE
 	CPU_SYSTEM,
 	CPU_USER,
 	TYPE,
+	OS_TYPE,
 	UUID
 };
 
@@ -98,6 +99,7 @@ template<>
 struct Schema<VE::TABLE>: mpl::vector<
 			Declaration<VE::TABLE, VE::VEID, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::TYPE, ASN_INTEGER>,
+			Declaration<VE::TABLE, VE::OS_TYPE, ASN_INTEGER>,
 			Declaration<VE::TABLE, VE::NAME, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::UUID, ASN_OCTET_STR>,
 			Declaration<VE::TABLE, VE::STATE, ASN_INTEGER>,

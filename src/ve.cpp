@@ -26,6 +26,7 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/shared_array.hpp>
+#include <prlsdk/PrlApiVm.h>
 #include <prlsdk/PrlPerfCounters.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/functional/hash/hash.hpp>
@@ -196,7 +197,8 @@ struct Type: Value::Storage
 	}
 
 	void refresh(PRL_HANDLE h_);
-	static bool extract(PRL_HANDLE h_, PRL_VM_TYPE& dst_);
+	static bool extract_type(PRL_HANDLE h_, PRL_VM_TYPE& dst_);
+	static bool extract_os_type(PRL_HANDLE h_, PRL_UINT32& dst_);
 private:
 	tupleWP_type m_data;
 };
@@ -207,15 +209,29 @@ void Type::refresh(PRL_HANDLE h_)
 	if (NULL != y.get())
 	{
 		PRL_VM_TYPE x = PVT_VM;
-		extract(h_, x);
+		extract_type(h_, x);
 		y->put<TYPE>(x);
+		PRL_UINT32 os_type;
+		extract_os_type(h_, os_type);
+		y->put<OS_TYPE>(os_type);
 	}
 }
 
-bool Type::extract(PRL_HANDLE h_, PRL_VM_TYPE& dst_)
+bool Type::extract_type(PRL_HANDLE h_, PRL_VM_TYPE& dst_)
 {
 	PRL_VM_TYPE t = PVT_VM;
 	PRL_RESULT e = PrlVmCfg_GetVmType(h_, &t);
+	if (PRL_FAILED(e))
+		return true;
+
+	dst_ = t;
+	return false;
+}
+
+bool Type::extract_os_type(PRL_HANDLE h_, PRL_UINT32& dst_)
+{
+	PRL_UINT32 t = -13;
+	PRL_RESULT e = PrlVmCfg_GetOsType(h_, &t);
 	if (PRL_FAILED(e))
 		return true;
 
@@ -303,7 +319,7 @@ private:
 FILE* Provenance::shaman(PRL_HANDLE h_, tupleSP_type ve_)
 {
 	PRL_VM_TYPE t = PVT_VM;
-	if (Type::extract(h_, t))
+	if (Type::extract_type(h_, t))
 		return NULL;
 
 	std::string x;
