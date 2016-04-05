@@ -1,6 +1,7 @@
 TARGET=rmond-drs
 SOURCES=$(PWD)/src
-SUBDIRS=$(SOURCES)
+TRANSPORT=$(PWD)/guest-transport
+SUBDIRS=$(SOURCES) $(TRANSPORT)
 define subdirs_call
 set -e
 for i in $(SUBDIRS); do $(MAKE) -C $$i $(1); done
