@@ -79,20 +79,13 @@ VE::Unit* make(PRL_HANDLE h_, const VE::space_type& ves_)
 	PRL_RESULT r = PrlVmCfg_GetVmType(h_, &t);
 	if (PRL_SUCCEEDED(r))
 	{
-		PRL_UINT32 x = 0;
 		switch (t)
 		{
 		case PVT_VM:
 			u = Sdk::getString(boost::bind(&PrlVmCfg_GetUuid, h_, _1, _2));
 			break;
 		case PVT_CT:
-			r = PrlVmCfg_GetEnvId(h_, &x);
-			if (PRL_SUCCEEDED(r))
-			{
-				std::ostringstream s;
-				s << x;
-				u = s.str();
-			}
+			u = Sdk::getString(boost::bind(&PrlVmCfg_GetCtId, h_, _1, _2));
 			break;
 		default:
 			break;
