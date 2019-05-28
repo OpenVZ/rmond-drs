@@ -1,6 +1,7 @@
 -- Parallels HA Specific MIB: Rmond MIB Extension
 -- 
 -- Copyright (c) 2013, Parallels, Inc.
+-- Copyright (c) 2017-2019 Virtuozzo International GmbH. All rights reserved.
 -- All rights reserved.
 --
 -- The contents of this document are subject to change without notice.
